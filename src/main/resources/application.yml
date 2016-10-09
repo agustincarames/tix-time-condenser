@@ -1,0 +1,36 @@
+tix-condenser:
+  queues:
+    receiving:
+      name: server-condenser-test
+    new-report:
+      name: new-report-test
+  reports:
+    path: ~/reports
+---
+spring:
+  profiles: test
+tix-condenser:
+  queues:
+    receiving:
+      name: ${random.value}
+    new-report:
+      name: ${random.value}
+---
+spring:
+  profiles: staging
+tix-condenser:
+  queues:
+    receiving:
+      name: server-condenser-staging
+    new-report:
+      name: new-report-prod
+---
+spring:
+  profiles: production
+tix-condenser:
+  queues:
+    receiving:
+      name: server-condenser-prod
+    new-report:
+      name: new-report-prod
+---

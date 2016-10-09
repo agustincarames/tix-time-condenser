@@ -1,14 +1,83 @@
 group 'ar.edu.itba.it.tix'
 version '0.1.0-SNAPSHOT'
 
-apply plugin: 'java'
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:1.4.1.RELEASE")
+    }
+}
 
-sourceCompatibility = 1.5
+
+apply plugin: 'java'
+apply plugin: 'idea'
+apply plugin: 'eclipse'
+apply plugin: 'jacoco'
+apply plugin: 'spring-boot'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
 
 repositories {
     mavenCentral()
 }
 
+ext {
+    tixTimeCoreVersion = "0.1.0"
+    jmsVersion = "1.1"
+    amqpClientVersion = "3.6.2"
+    nettyVersion = "4.0.36.Final"
+    commonsConfigVersion = "2.1"
+    commonsLangVersion = "3.4"
+    guavaVersion = "19.0"
+    assertjVersion = "3.4.1"
+    log4jVersion = "2.5"
+    junitVersion = "4.12"
+    mockitoVersion = "1.9.5"
+}
+
 dependencies {
-    testCompile group: 'junit', name: 'junit', version: '4.11'
+    // Base
+    compile group: "org.springframework.boot", name: "spring-boot-starter"
+    compile group: "org.springframework.boot", name: "spring-boot-starter-amqp"
+    testCompile group: "org.springframework.boot", name: "spring-boot-starter-test"
+    // Core
+    compile group: 'com.github.tix-measurements', name: 'tix-time-core', version: "${tixTimeCoreVersion}"
+    compile group: 'javax.jms', name: 'jms', version: "${jmsVersion}"
+    compile group: 'com.rabbitmq', name: 'amqp-client', version: "${amqpClientVersion}"
+    compile group: 'io.netty', name: 'netty-all', version: "${nettyVersion}"
+    // Libs & Misc.
+    compile group: 'org.apache.commons', name: 'commons-configuration2', version: "${commonsConfigVersion}"
+    compile group: 'org.apache.commons', name: 'commons-lang3', version: "${commonsLangVersion}"
+    compile group: 'com.google.guava', name: 'guava', version: "${guavaVersion}"
+    compile group: 'org.assertj', name: 'assertj-core', version: "${assertjVersion}"
+    // Logging
+    compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: "${log4jVersion}"
+    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: "${log4jVersion}"
+    // Testing
+    testCompile group: 'junit', name: 'junit', version: "${junitVersion}"
+    testCompile group: 'org.mockito', name: 'mockito-all', version: "${mockitoVersion}"
+}
+
+jacoco {
+    toolVersion = "0.7.6.201602180812"
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled true
+        xml.destination "${buildDir}/test-results/coverage.xml"
+        csv.enabled false
+        html.destination "${buildDir}/reports/coverage"
+    }
+}
+
+test {
+    jacoco {
+        append = false
+        destinationFile = file("$buildDir/jacoco/jacocoTest.exec")
+        classDumpFile = file("$buildDir/jacoco/classpathdumps")
+    }
 }
