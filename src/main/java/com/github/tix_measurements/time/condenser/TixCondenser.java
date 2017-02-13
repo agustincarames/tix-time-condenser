@@ -12,9 +12,6 @@ public class TixCondenser {
 	@Value("${tix-condenser.queues.receiving.name}")
 	private String receivingQueueName;
 
-	@Value("${tix-condenser.queues.new-report.name}")
-	private String newReportQueueName;
-
 	@Value("${tix-condenser.reports.path}")
 	private String reportsPath;
 
