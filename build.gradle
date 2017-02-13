@@ -1,4 +1,4 @@
-group 'ar.edu.itba.it.tix'
+group 'com.github.tix_measurements'
 version '0.1.0-SNAPSHOT'
 
 buildscript {
@@ -6,26 +6,35 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("org.springframework.boot:spring-boot-gradle-plugin:1.4.1.RELEASE")
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:1.4.4.RELEASE")
     }
 }
-
 
 apply plugin: 'java'
 apply plugin: 'idea'
 apply plugin: 'eclipse'
 apply plugin: 'jacoco'
-apply plugin: 'spring-boot'
+apply plugin: 'org.springframework.boot'
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
+
+compileJava {
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
+}
+
+compileTestJava {
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
+}
 
 repositories {
     mavenCentral()
 }
 
 ext {
-    tixTimeCoreVersion = "0.1.0"
+    tixTimeCoreVersion = "2.2.2"
     jmsVersion = "1.1"
     amqpClientVersion = "3.6.2"
     nettyVersion = "4.0.36.Final"
@@ -42,10 +51,11 @@ dependencies {
     // Base
     compile group: "org.springframework.boot", name: "spring-boot-starter"
     compile group: "org.springframework.boot", name: "spring-boot-starter-amqp"
+    compile group: "org.springframework", name: "spring-web"
     testCompile group: "org.springframework.boot", name: "spring-boot-starter-test"
     // Core
     compile group: 'com.github.tix-measurements', name: 'tix-time-core', version: "${tixTimeCoreVersion}"
-    compile group: 'javax.jms', name: 'jms', version: "${jmsVersion}"
+//    compile group: 'javax.jms', name: 'jms', version: "${jmsVersion}"
     compile group: 'com.rabbitmq', name: 'amqp-client', version: "${amqpClientVersion}"
     compile group: 'io.netty', name: 'netty-all', version: "${nettyVersion}"
     // Libs & Misc.
@@ -80,4 +90,32 @@ test {
         destinationFile = file("$buildDir/jacoco/jacocoTest.exec")
         classDumpFile = file("$buildDir/jacoco/classpathdumps")
     }
+}
+group 'com.github.tix_measurements'
+version '0.1.0-SNAPSHOT'
+
+apply plugin: 'java'
+
+sourceCompatibility = 1.5
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+}
+group 'com.github.tix_measurements'
+version '0.1.0-SNAPSHOT'
+
+apply plugin: 'java'
+
+sourceCompatibility = 1.5
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.11'
 }
