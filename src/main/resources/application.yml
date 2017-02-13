@@ -1,9 +1,11 @@
 tix-condenser:
+  tix-api:
+    https: false
+    host: localhost
+    port: 80
   queues:
     receiving:
       name: server-condenser-test
-    new-report:
-      name: new-report-test
   reports:
     path: ~/reports
 ---
