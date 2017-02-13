@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-./gradlew bootRun
+java -jar tix-time-condenser.jar
