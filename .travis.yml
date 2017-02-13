@@ -13,15 +13,15 @@ scrip:
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
-#  - ./gradlew fatJar
-#  - cp build/libs/tix-time-server-condenser-*.jar tix-time-server.jar
-#  - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
-#  - export REPO=tixmeasurements/tix-time-condenser
-#  - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
-#  - docker build -f Dockerfile -t $REPO:$COMMIT .
-#  - docker tag $REPO:$COMMIT $REPO:$TAG
-#  - docker tag $REPO:$COMMIT $REPO:travis-$TRAVIS_BUILD_NUMBER
-#  - docker push $REPO
+  - ./gradlew fatJar
+  - cp build/libs/tix-time-server-condenser-*.jar tix-time-server.jar
+  - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+  - export REPO=tixmeasurements/tix-time-condenser
+  - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
+  - docker build -f Dockerfile -t $REPO:$COMMIT .
+  - docker tag $REPO:$COMMIT $REPO:$TAG
+  - docker tag $REPO:$COMMIT $REPO:travis-$TRAVIS_BUILD_NUMBER
+  - docker push $REPO
 
 env:
   global:

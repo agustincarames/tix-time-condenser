@@ -46,9 +46,9 @@ public class TixReceiver {
 	private final String apiPath;
 
 	public TixReceiver(@Value("${tix-condenser.reports.path}") String reportsPath,
-	                   @Value("&{tix-condenser.tix-api.https") boolean useHttps,
-	                   @Value("${tix-condenser.tix-api.host") String apiHost,
-	                   @Value("${tix-condenser.tix-api.port") int apiPort) {
+	                   @Value("${tix-condenser.tix-api.https}") boolean useHttps,
+	                   @Value("${tix-condenser.tix-api.host}") String apiHost,
+	                   @Value("${tix-condenser.tix-api.port}") int apiPort) {
 		this.packetSerDe = new TixPacketSerDe();
 		this.apiClient = new RestTemplate();
 		this.baseReportsPath = Paths.get(reportsPath).toAbsolutePath();
