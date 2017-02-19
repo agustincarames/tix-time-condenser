@@ -1,4 +1,6 @@
 # tix-time-condenser
+[![Build Status](https://travis-ci.org/TiX-measurements/tix-time-condenser.svg?branch=master)](https://travis-ci.org/TiX-measurements/tix-time-condenser)
+[![codecov](https://codecov.io/gh/TiX-measurements/tix-time-condenser/branch/master/graph/badge.svg)](https://codecov.io/gh/TiX-measurements/tix-time-condenser)
 
 This is the `tix-time-condenser` microservice. The idea behind it is to condense all the reports from the server into the directories of each user and installation.  
 It also checks the package integrity and coherence by performing a check upon the message, signature and public key provided.
