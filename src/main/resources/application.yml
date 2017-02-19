@@ -2,21 +2,17 @@ tix-condenser:
   tix-api:
     https: false
     host: localhost
-    port: 80
+    port: 8080
   queues:
     receiving:
       name: server-condenser-test
   reports:
-    path: ~/reports
+    path: /tmp/reports
 ---
 spring:
   profiles: test
-tix-condenser:
-  queues:
-    receiving:
-      name: ${random.value}
-    new-report:
-      name: ${random.value}
+server:
+  port: 0
 ---
 spring:
   profiles: staging
@@ -24,8 +20,6 @@ tix-condenser:
   queues:
     receiving:
       name: server-condenser-staging
-    new-report:
-      name: new-report-prod
 ---
 spring:
   profiles: production
@@ -33,6 +27,4 @@ tix-condenser:
   queues:
     receiving:
       name: server-condenser-prod
-    new-report:
-      name: new-report-prod
 ---
