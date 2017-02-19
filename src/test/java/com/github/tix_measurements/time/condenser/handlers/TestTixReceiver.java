@@ -18,11 +18,11 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -32,8 +32,7 @@ import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
@@ -47,13 +46,13 @@ public class TestReceiver {
 	private static final long INSTALLATION_ID = 1L;
 	private static final String INSTALLATION_NAME = "test-installation";
 	private static final KeyPair INSTALLATION_KEY_PAIR = TixCoreUtils.NEW_KEY_PAIR.get();
-	private static final TixPacketSerDe serDe = new TixPacketSerDe();
+	private static final TixPacketSerDe TIX_PACKET_SER_DE = new TixPacketSerDe();
 
 	private MockRestServiceServer server;
 	private TixReceiver receiver;
 	private byte[] message;
 
-	private static byte[] generateMessage() throws InterruptedException {
+	public static byte[] generateMessage() throws InterruptedException {
 		int reports = 10;
 		int timestamps = 4;
 		int timestampSize = Long.BYTES;
@@ -72,10 +71,25 @@ public class TestReceiver {
 	}
 
 	@Before
-	public void setup() throws InterruptedException {
+	public void setup() throws InterruptedException, JsonProcessingException {
 		receiver = new TixReceiver(REPORTS_PATH.toString(), USE_HTTPS, API_HOST, API_PORT);
 		server = MockRestServiceServer.createServer(receiver.getApiClient());
 		message = generateMessage();
+	}
+
+	private TixDataPacket createNewPacket(long userId, long installationId, KeyPair keyPair) throws UnknownHostException, InterruptedException {
+		TixDataPacket packet = new TixDataPacket(
+				new InetSocketAddress(InetAddress.getByName("8.8.8.8"), 4500),
+				new InetSocketAddress(InetAddress.getLocalHost(), 4500),
+				TixCoreUtils.NANOS_OF_DAY.get(),
+				userId,
+				installationId,
+				keyPair.getPublic().getEncoded(),
+				message,
+				TixCoreUtils.sign(message, keyPair));
+		Thread.sleep(5L);
+		packet.setReceptionTimestamp(TixCoreUtils.NANOS_OF_DAY.get());
+		return packet;
 	}
 
 	@After
@@ -91,17 +105,7 @@ public class TestReceiver {
 
 	@Test
 	public void testValidPacket() throws IOException, InterruptedException {
-		TixDataPacket packet = new TixDataPacket(
-				new InetSocketAddress(InetAddress.getByName("8.8.8.8"), 4500),
-				new InetSocketAddress(InetAddress.getLocalHost(), 4500),
-				TixCoreUtils.NANOS_OF_DAY.get(),
-				USER_ID,
-				INSTALLATION_ID,
-				INSTALLATION_KEY_PAIR.getPublic().getEncoded(),
-				message,
-				TixCoreUtils.sign(message, INSTALLATION_KEY_PAIR));
-		Thread.sleep(5L);
-		packet.setReceptionTimestamp(TixCoreUtils.NANOS_OF_DAY.get());
+		TixDataPacket packet = createNewPacket(USER_ID, INSTALLATION_ID, INSTALLATION_KEY_PAIR);
 		ObjectMapper mapper = new ObjectMapper();
 		server.expect(requestTo(format("http://%s:%d/api/user/%d", API_HOST, API_PORT, USER_ID)))
 				.andExpect(method(HttpMethod.GET))
@@ -111,7 +115,7 @@ public class TestReceiver {
 				.andRespond(withSuccess(
 						mapper.writeValueAsString(new TixInstallation(INSTALLATION_ID, INSTALLATION_NAME,TixCoreUtils.ENCODER.apply(INSTALLATION_KEY_PAIR.getPublic().getEncoded()))),
 						MediaType.APPLICATION_JSON));
-		receiver.receiveMessage(serDe.serialize(packet));
+		receiver.receiveMessage(TIX_PACKET_SER_DE.serialize(packet));
 		server.verify();
 		Path expectedReportPath = REPORTS_PATH.resolve(Long.toString(USER_ID)).resolve(Long.toString(INSTALLATION_ID));
 		assertThat(expectedReportPath)
@@ -134,7 +138,7 @@ public class TestReceiver {
 					assertThat(reader.lines().count()).isEqualTo(1);
 					reader.lines().forEach(reportLine -> {
 						try {
-							TixDataPacket filePacket = serDe.deserialize(reportLine.getBytes());
+							TixDataPacket filePacket = TIX_PACKET_SER_DE.deserialize(reportLine.getBytes());
 							assertThat(filePacket).isEqualTo(expectedPacket);
 						} catch (IOException e) {
 							throw new AssertionError(e);
@@ -150,45 +154,25 @@ public class TestReceiver {
 	@Test
 	public void testInvalidUser() throws InterruptedException, UnknownHostException, JsonProcessingException {
 		long otherUserId = USER_ID + 1L;
-		TixDataPacket packet = new TixDataPacket(
-				new InetSocketAddress(InetAddress.getByName("8.8.8.8"), 4500),
-				new InetSocketAddress(InetAddress.getLocalHost(), 4500),
-				TixCoreUtils.NANOS_OF_DAY.get(),
-				otherUserId,
-				INSTALLATION_ID,
-				INSTALLATION_KEY_PAIR.getPublic().getEncoded(),
-				message,
-				TixCoreUtils.sign(message, INSTALLATION_KEY_PAIR));
-		Thread.sleep(5L);
-		packet.setReceptionTimestamp(TixCoreUtils.NANOS_OF_DAY.get());
+		TixDataPacket packet = createNewPacket(otherUserId, INSTALLATION_ID, INSTALLATION_KEY_PAIR);
 		server.expect(requestTo(format("http://%s:%d/api/user/%d", API_HOST, API_PORT, otherUserId)))
 				.andExpect(method(HttpMethod.GET))
 				.andRespond(withStatus(HttpStatus.NOT_FOUND));
-		receiver.receiveMessage(serDe.serialize(packet));
+		receiver.receiveMessage(TIX_PACKET_SER_DE.serialize(packet));
 		server.verify();
-		Path expectedReportPath = REPORTS_PATH.resolve(Long.toString(USER_ID)).resolve(Long.toString(INSTALLATION_ID));
+		Path expectedReportPath = REPORTS_PATH.resolve(Long.toString(otherUserId)).resolve(Long.toString(INSTALLATION_ID));
 		assertThat(expectedReportPath).doesNotExist();
 	}
 
 	@Test
 	public void testDisabledUser() throws InterruptedException, UnknownHostException, JsonProcessingException {
 		long otherUserId = USER_ID + 1L;
-		TixDataPacket packet = new TixDataPacket(
-				new InetSocketAddress(InetAddress.getByName("8.8.8.8"), 4500),
-				new InetSocketAddress(InetAddress.getLocalHost(), 4500),
-				TixCoreUtils.NANOS_OF_DAY.get(),
-				otherUserId,
-				INSTALLATION_ID,
-				INSTALLATION_KEY_PAIR.getPublic().getEncoded(),
-				message,
-				TixCoreUtils.sign(message, INSTALLATION_KEY_PAIR));
-		Thread.sleep(5L);
-		packet.setReceptionTimestamp(TixCoreUtils.NANOS_OF_DAY.get());
+		TixDataPacket packet = createNewPacket(otherUserId, INSTALLATION_ID, INSTALLATION_KEY_PAIR);
 		ObjectMapper mapper = new ObjectMapper();
 		server.expect(requestTo(format("http://%s:%d/api/user/%d", API_HOST, API_PORT, otherUserId)))
 				.andExpect(method(HttpMethod.GET))
-				.andRespond(withSuccess(mapper.writeValueAsString(new TixUser(USER_ID, USERNAME, false)), MediaType.APPLICATION_JSON));
-		receiver.receiveMessage(serDe.serialize(packet));
+				.andRespond(withSuccess(mapper.writeValueAsString(new TixUser(otherUserId, USERNAME, false)), MediaType.APPLICATION_JSON));
+		receiver.receiveMessage(TIX_PACKET_SER_DE.serialize(packet));
 		server.verify();
 		Path expectedReportPath = REPORTS_PATH.resolve(Long.toString(USER_ID)).resolve(Long.toString(INSTALLATION_ID));
 		assertThat(expectedReportPath).doesNotExist();
@@ -197,17 +181,7 @@ public class TestReceiver {
 	@Test
 	public void testInvalidInstallation() throws InterruptedException, UnknownHostException, JsonProcessingException {
 		long otherInstallationId = INSTALLATION_ID + 1L;
-		TixDataPacket packet = new TixDataPacket(
-				new InetSocketAddress(InetAddress.getByName("8.8.8.8"), 4500),
-				new InetSocketAddress(InetAddress.getLocalHost(), 4500),
-				TixCoreUtils.NANOS_OF_DAY.get(),
-				USER_ID,
-				otherInstallationId,
-				INSTALLATION_KEY_PAIR.getPublic().getEncoded(),
-				message,
-				TixCoreUtils.sign(message, INSTALLATION_KEY_PAIR));
-		Thread.sleep(5L);
-		packet.setReceptionTimestamp(TixCoreUtils.NANOS_OF_DAY.get());
+		TixDataPacket packet = createNewPacket(USER_ID, otherInstallationId, INSTALLATION_KEY_PAIR);
 		ObjectMapper mapper = new ObjectMapper();
 		server.expect(requestTo(format("http://%s:%d/api/user/%d", API_HOST, API_PORT, USER_ID)))
 				.andExpect(method(HttpMethod.GET))
@@ -215,26 +189,16 @@ public class TestReceiver {
 		server.expect(requestTo(format("http://%s:%d/api/user/%d/installation/%d", API_HOST, API_PORT, USER_ID, otherInstallationId)))
 				.andExpect(method(HttpMethod.GET))
 				.andRespond(withStatus(HttpStatus.NOT_FOUND));
-		receiver.receiveMessage(serDe.serialize(packet));
+		receiver.receiveMessage(TIX_PACKET_SER_DE.serialize(packet));
 		server.verify();
-		Path expectedReportPath = REPORTS_PATH.resolve(Long.toString(USER_ID)).resolve(Long.toString(INSTALLATION_ID));
+		Path expectedReportPath = REPORTS_PATH.resolve(Long.toString(USER_ID)).resolve(Long.toString(otherInstallationId));
 		assertThat(expectedReportPath).doesNotExist();
 	}
 
 	@Test
 	public void testInstallationPublicKey() throws InterruptedException, UnknownHostException, JsonProcessingException {
 		KeyPair otherKeyPair = TixCoreUtils.NEW_KEY_PAIR.get();
-		TixDataPacket packet = new TixDataPacket(
-				new InetSocketAddress(InetAddress.getByName("8.8.8.8"), 4500),
-				new InetSocketAddress(InetAddress.getLocalHost(), 4500),
-				TixCoreUtils.NANOS_OF_DAY.get(),
-				USER_ID,
-				INSTALLATION_ID,
-				otherKeyPair.getPublic().getEncoded(),
-				message,
-				TixCoreUtils.sign(message, otherKeyPair));
-		Thread.sleep(5L);
-		packet.setReceptionTimestamp(TixCoreUtils.NANOS_OF_DAY.get());
+		TixDataPacket packet = createNewPacket(USER_ID, INSTALLATION_ID, otherKeyPair);
 		ObjectMapper mapper = new ObjectMapper();
 		server.expect(requestTo(format("http://%s:%d/api/user/%d", API_HOST, API_PORT, USER_ID)))
 				.andExpect(method(HttpMethod.GET))
@@ -244,7 +208,7 @@ public class TestReceiver {
 				.andRespond(withSuccess(
 						mapper.writeValueAsString(new TixInstallation(INSTALLATION_ID, INSTALLATION_NAME,TixCoreUtils.ENCODER.apply(INSTALLATION_KEY_PAIR.getPublic().getEncoded()))),
 						MediaType.APPLICATION_JSON));
-		receiver.receiveMessage(serDe.serialize(packet));
+		receiver.receiveMessage(TIX_PACKET_SER_DE.serialize(packet));
 		server.verify();
 		Path expectedReportPath = REPORTS_PATH.resolve(Long.toString(USER_ID)).resolve(Long.toString(INSTALLATION_ID));
 		assertThat(expectedReportPath).doesNotExist();
