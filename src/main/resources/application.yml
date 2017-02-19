@@ -15,11 +15,11 @@ server:
   port: 0
 ---
 spring:
-  profiles: stage
+  profiles: staging
 tix-condenser:
   queues:
     receiving:
-      name: server-condenser-stage
+      name: server-condenser-staging
 ---
 spring:
   profiles: production
