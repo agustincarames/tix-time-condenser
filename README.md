@@ -21,3 +21,24 @@ The `tix-time-condenser` has four SpringBoot Profiles. `dev` or `default`, `test
   * `production` is to deploy the microservice in the stable environment
   
 Both `staging` and `production` have almost no difference whatsoever in the performance department. The only difference is in the queue name where the new packets are received.
+
+## How to run it
+
+If you are in a dev environment, you can simply use the gradle script by doing:
+```
+$> ./gradlew bootRun
+```
+
+If you are in a deployment environment or simply want to run the container, you can must follow these steps:
+```
+$> docker volume create --name ReportsVolume
+$> docker run --net="host" -v ReportsVolume:/tmp/reports -dit tixmeasurements/tix-time-condenser:latest
+```
+
+In the first step we create a volume that will be used by our container and the `tix-time-processor`'s. 
+On the second step we run our container with:
+
+  * The host interface so we can attach to the RabbitMQ service
+  * The name `tix_time_condenser` to be able to find it quicker when doing `docker ps` or any other docker management command
+  * The `-v` flag with our recently created volume
+  * The `-d` flag to detach it and run it as a daemon
