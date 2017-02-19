@@ -19,18 +19,11 @@ apply plugin: 'org.springframework.boot'
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
-compileJava {
-    sourceCompatibility = 1.8
-    targetCompatibility = 1.8
-}
-
-compileTestJava {
-    sourceCompatibility = 1.8
-    targetCompatibility = 1.8
-}
-
 repositories {
-    mavenCentral()
+    //mavenCentral()
+    maven {
+        url 'http://repo1.maven.org/maven2'
+    }
 }
 
 ext {
@@ -51,6 +44,7 @@ dependencies {
     // Base
     compile group: "org.springframework.boot", name: "spring-boot-starter"
     compile group: "org.springframework.boot", name: "spring-boot-starter-amqp"
+    compile group: "org.springframework.boot", name: "spring-boot-starter-actuator"
     compile group: "org.springframework", name: "spring-web"
     testCompile group: "org.springframework.boot", name: "spring-boot-starter-test"
     // Core
@@ -90,32 +84,4 @@ test {
         destinationFile = file("$buildDir/jacoco/jacocoTest.exec")
         classDumpFile = file("$buildDir/jacoco/classpathdumps")
     }
-}
-group 'com.github.tix_measurements'
-version '0.1.0-SNAPSHOT'
-
-apply plugin: 'java'
-
-sourceCompatibility = 1.5
-
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-    testCompile group: 'junit', name: 'junit', version: '4.11'
-}
-group 'com.github.tix_measurements'
-version '0.1.0-SNAPSHOT'
-
-apply plugin: 'java'
-
-sourceCompatibility = 1.5
-
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-    testCompile group: 'junit', name: 'junit', version: '4.11'
 }
