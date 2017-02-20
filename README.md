@@ -7,7 +7,7 @@ It also checks the package integrity and coherence by performing a check upon th
 
 ## Installation
 
-The `tix-time-condenser` is currently in CD thourgh Travis and DockerHub. So to install it you just need to download the latest release of this repository container and run the image.
+The `tix-time-condenser` is currently in CD through Travis and DockerHub. So to install it you just need to download the latest release of this repository container and run the image.
 
 Since this microservice is made using SpringBoot, you can update any configuration variable using environment variables or passing them to the image at runtime.
 
