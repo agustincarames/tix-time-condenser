@@ -7,6 +7,10 @@ services:
   - docker
   - rabbitmq
 
+before_script:
+  - rabbitmq-plugins enable rabbitmq_management
+  - rabbitmqadmin declare queue name=server-condenser-test durable=true
+
 scrip:
   - ./gradlew test jacocoTestReport
   #TODO: add tests from docker
