@@ -8,8 +8,7 @@ services:
   - rabbitmq
 
 before_script:
-  - curl -i -u guest:guest http://localhost:15672/api/overview
-  - curl -i -u guest:guest http://localhost:15672/api/nodes
+  - rabbitmqadmin declare queue name=server-condenser-test durable=true
 
 scrip:
   - ./gradlew test jacocoTestReport
