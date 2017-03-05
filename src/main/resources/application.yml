@@ -11,6 +11,16 @@ tix-condenser:
 ---
 spring:
   profiles: test
+tix-condenser:
+  tix-api:
+    https: false
+    host: localhost
+    port: 8081
+  queues:
+    receiving:
+      name: server-condenser-test
+  reports:
+    path: /tmp/reports
 server:
   port: 0
 ---

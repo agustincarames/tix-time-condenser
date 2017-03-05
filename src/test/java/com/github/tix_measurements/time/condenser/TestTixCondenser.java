@@ -213,6 +213,7 @@ public class TestTixCondenser {
 	}
 
 	@Test
+	@DirtiesContext
 	public void testInvalidInstallation() throws InterruptedException, UnknownHostException, JsonProcessingException {
 		long otherInstallationId = installationId + 1L;
 		TixDataPacket packet = TestTixReceiver.createNewPacket(message, userId, otherInstallationId, installationKeyPair);
@@ -230,6 +231,7 @@ public class TestTixCondenser {
 	}
 
 	@Test
+	@DirtiesContext
 	public void testInstallationPublicKey() throws InterruptedException, UnknownHostException, JsonProcessingException {
 		KeyPair otherKeyPair = TixCoreUtils.NEW_KEY_PAIR.get();
 		TixDataPacket packet = TestTixReceiver.createNewPacket(message, userId, installationId, otherKeyPair);
