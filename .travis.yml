@@ -10,7 +10,7 @@ services:
 before_script:
   - curl -i -u guest:guest -H "content-type:application/json" -XPUT -d'{"auto_delete":false,"durable":true,"type":"direct","arguments":[]}' http://localhost:15672/api/queues/%2f/server-condenser-test
 
-scrip:
+script:
   - ./gradlew test jacocoTestReport
   - ./docker_ci_test.sh
 
