@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 docker volume create --name ReportsVolume
-ls /var/lib/docker/volumes/
+ls /var/lib/
 
 ./gradlew bootRepackage
 cp build/libs/tix-time-condenser-*.jar tix-time-condenser.jar
