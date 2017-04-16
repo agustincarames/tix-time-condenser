@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 
-docker volume create --name ReportsVolume
-ls /var/lib/docker/
-
 ./gradlew bootRepackage
 cp build/libs/tix-time-condenser-*.jar tix-time-condenser.jar
+docker volume create --name ReportsVolume
 docker build -f Dockerfile -t tixmeasurements/tix-time-condenser:citest .
 
 docker run -v $PWD/src/test/resources/mock-api-responses.md:/etc/secrets/api.md -p 3000:3000 -dit wolfdeng/api-mock-server
