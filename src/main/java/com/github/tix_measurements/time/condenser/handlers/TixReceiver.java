@@ -67,7 +67,7 @@ public class TixReceiver {
 		boolean okResponseStatus = userResponseEntity.getStatusCode() == HttpStatus.OK;
 		boolean userEnabled = userResponseEntity.getBody().isEnabled();
 		if (!okResponseStatus) {
-			logger.warn("Response status is no 200 OK");
+			logger.warn("Response status is not 200 OK");
 		}
 		if (!userEnabled) {
 			logger.warn("User is disabled");
