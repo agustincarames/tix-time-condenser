@@ -12,7 +12,7 @@ before_script:
 
 script:
   - ./gradlew test jacocoTestReport
-  - sudo ./docker_ci_test.sh
+  - sudo ./docker-ci-test/docker_ci_test.sh
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
