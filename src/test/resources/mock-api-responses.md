@@ -1,0 +1,13 @@
+# /api/user/{user_id}
+
+## GET
++ Response 200 (application/json)
+
+        {"id":1,"username":"test-user","enabled":true}
+
+# /api/user/{user_id}/installation/{installation_id}
+
+## GET
++ Response 200 (application/json)
+
+        {"id":1,"name":"test-installation","publicKey":"MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0k7nCYsQpGXsxvz5lMZeeKYzGpTd56kfasM8BZcONSOArX8z3U5nUbB1Gj5PIXeJJugEFRB2ZT+oa8IsOXolaLpqhdUiO6EPi6jUNyKooBQrd0151x+meXZfvyLVGrPvVRH0fDvQu8m8yS1ZrZsarswykw/goesI2zLLI4OK8F5ukhBVqquntCNfGx042ZWu1woHfJfdUolQWeCV9zi/hxIf+H2p1kUEpDVhSPA06FIlyN+D5sdqb7doqo8ZH2QV2qWAImv9DZznneULPRwszrvBIsauFHdIeMzO0gEgNPEKnNj5cR47244c6lRdzpw32XaTyYN0qU0yJ/lLAOHESQIDAQAB","message":"AAA44ZtIPgAAADjhm6PLgAAAOOGb8BbAAAA44Zw8YgAAADjhnIitQAAAOOGc1PiAAAA44Z0hQ8AAADjhnW2PAAAAOOGdyRyAAAA44Z4VZ8AAADjhnmGzAAAAOOGerf5AAAA44Z76SYAAADjhn0aUwAAAOOGfoiJAAAA44Z/ubYAAADjhoDq4wAAAOOGghwQAAAA44aDTT0AAADjhoR+agAAAOOGha+XAAAA44aHHc0AAADjhohO+gAAAOOGiYAnAAAA44aKsVQAAADjhovigQAAAOOGjROuAAAA44aORNsAAADjho92CAAAAOOGkOQ+AAAA44aSFWsAAADjhpNGmAAAAOOGlHfFAAAA44aVqPIAAADjhpbaHwAAAOOGmEhVAAAA44aZeYIAAADjhpqqrwAAAOOGm9vcAAAA44adDQkA=","signature":"scKWydio//GnZoAmgKslnDoTtleG5yyRtoJtMks+/ooTRYzIbS3qmmalWwM3+zO4av0trfE8PmiUTAVlMZLRG0ThyXFc7jB/iyE9U9Z47phis0kLEW75oXjhB2XQjNiLebQshZ+f0M0YvJ5wGagUMOPaMobCP8Kg5OkIeYKXIdvbuleXy3FV35zghcApyC5CDcdBjgBKLIcLmwoXct1rqiGs6cyfpaOX74+YsNe3k7eOE/AMiTn+zH1s+Fj2cVyo4N3AboASjrVxtJM15duZ1ddu7OWffY5fI48U/KXXHz7skPCaaw8clyBcU+YLdSsNg/50vEvkSh/IZEJPkOyqOw=="}

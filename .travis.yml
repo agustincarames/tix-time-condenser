@@ -12,7 +12,7 @@ before_script:
 
 scrip:
   - ./gradlew test jacocoTestReport
-  #TODO: add tests from docker
+  - ./docker_ci_test.sh
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
