@@ -84,8 +84,8 @@ public class TestTixReceiver {
 
 	public static TixDataPacket createNewPacket(byte[] message, long userId, long installationId, KeyPair keyPair) throws UnknownHostException, InterruptedException {
 		TixDataPacket packet = new TixDataPacket(
-				new InetSocketAddress(InetAddress.getByName("8.8.8.8"), 4500),
 				new InetSocketAddress(InetAddress.getLocalHost(), 4500),
+				new InetSocketAddress(InetAddress.getByName("8.8.8.8"), 4500),
 				TixCoreUtils.NANOS_OF_DAY.get(),
 				userId,
 				installationId,
