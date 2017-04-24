@@ -6,6 +6,7 @@ import com.github.tix_measurements.time.condenser.model.TixInstallation;
 import com.github.tix_measurements.time.condenser.model.TixUser;
 import com.github.tix_measurements.time.condenser.utils.jackson.TixPacketSerDe;
 import com.github.tix_measurements.time.core.data.TixDataPacket;
+import com.github.tix_measurements.time.core.data.TixPacketType;
 import com.github.tix_measurements.time.core.util.TixCoreUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -26,6 +27,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyPair;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.stream.Stream;
 
@@ -51,6 +55,7 @@ public class TestTixReceiver {
 	private MockRestServiceServer server;
 	private TixReceiver receiver;
 	private byte[] message;
+	private long reportFirstUnixTimestamp;
 
 	public static byte[] generateMessage() throws InterruptedException {
 		int reports = 10;
@@ -75,11 +80,20 @@ public class TestTixReceiver {
 		return message;
 	}
 
+	public static long getReportFirstUnixTimestamp(byte[] message) {
+		ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+		byte[] bytes = Arrays.copyOfRange(message, 0, Long.BYTES);
+		buffer.put(bytes);
+		buffer.flip();
+		return buffer.getLong();
+	}
+
 	@Before
 	public void setup() throws InterruptedException {
 		receiver = new TixReceiver(REPORTS_PATH.toString(), USE_HTTPS, API_HOST, API_PORT);
 		server = MockRestServiceServer.createServer(receiver.getApiClient());
 		message = generateMessage();
+		reportFirstUnixTimestamp = getReportFirstUnixTimestamp(message);
 	}
 
 	public static TixDataPacket createNewPacket(byte[] message, long userId, long installationId, KeyPair keyPair) throws UnknownHostException, InterruptedException {
@@ -139,6 +153,8 @@ public class TestTixReceiver {
 				assertThat(file.getFileName().toString())
 						.startsWith(TixReceiver.REPORTS_FILE_SUFFIX)
 						.endsWith(TixReceiver.REPORTS_FILE_EXTENSION);
+				assertThat(file.getFileName().toString())
+						.isEqualTo(format(TixReceiver.REPORTS_FILE_NAME_TEMPLATE, reportFirstUnixTimestamp));
 				try (BufferedReader reader = Files.newBufferedReader(file)) {
 					assertThat(reader.lines().count()).isEqualTo(1);
 					reader.lines().forEach(reportLine -> {

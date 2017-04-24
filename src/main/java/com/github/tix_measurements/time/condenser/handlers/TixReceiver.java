@@ -18,6 +18,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -25,6 +26,7 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Set;
 
@@ -108,14 +110,20 @@ public class TixReceiver {
 						logger.error("Cannot assert directory existence, Maybe privilege issues?");
 						throw new Error("Cannot assert directory existence. Maybe privilege issues?");
 					}
-					Path reportPath = Files.createFile(reportDirectory.resolve(format(REPORTS_FILE_NAME_TEMPLATE,
-									LocalDateTime.now().toEpochSecond(ZoneOffset.UTC))));
-					logger.info("Creating report file");
-					logger.debug("reportPath={}", reportPath);
-					try (BufferedWriter writer = Files.newBufferedWriter(reportPath)) {
-						writer.write(new String(packetSerDe.serialize(packet)));
+					long firstReportTimestamp = getFirstReportTimestamp(packet);
+					Path reportPath = reportDirectory.resolve(format(REPORTS_FILE_NAME_TEMPLATE, firstReportTimestamp));
+					if (!Files.exists(reportPath)) {
+						Files.createFile(reportPath);
+						logger.info("Creating report file");
+						logger.debug("reportPath={}", reportPath);
+						try (BufferedWriter writer = Files.newBufferedWriter(reportPath)) {
+							writer.write(new String(packetSerDe.serialize(packet)));
+						}
+						logger.info("Report file successfully created");
+					} else {
+						logger.info("Report file already exists. Not writing to disk.");
+						logger.info("reportPath={}", reportPath);
 					}
-					logger.info("Report file successfully created");
 				} else {
 					logger.warn("Invalid user or installation");
 					logger.debug("packet={}", packet);
@@ -136,6 +144,14 @@ public class TixReceiver {
 				throw hcee;
 			}
 		}
+	}
+
+	public long getFirstReportTimestamp(TixDataPacket packet) {
+		byte[] bytes = Arrays.copyOfRange(packet.getMessage(), 0, Long.BYTES);
+		ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+		buffer.put(bytes);
+		buffer.flip();
+		return buffer.getLong();
 	}
 
 	public RestTemplate getApiClient() {

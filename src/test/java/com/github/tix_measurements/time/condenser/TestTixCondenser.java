@@ -84,6 +84,7 @@ public class TestTixCondenser {
 	private KeyPair installationKeyPair;
 	private Path reportsPath;
 	private byte[] message;
+	private long reportFirstUnixTimestamp;
 	private String username;
 	private long userId;
 	private String installationName;
@@ -96,6 +97,7 @@ public class TestTixCondenser {
 		installationKeyPair = TixCoreUtils.NEW_KEY_PAIR.get();
 		reportsPath = Paths.get(reportsPathString);
 		message = TestTixReceiver.generateMessage();
+		reportFirstUnixTimestamp = TestTixReceiver.getReportFirstUnixTimestamp(message);
 		username = "test-user";
 		userId = 1L;
 		installationName = "test-installation";
@@ -164,6 +166,8 @@ public class TestTixCondenser {
 				assertThat(file.getFileName().toString())
 						.startsWith(TixReceiver.REPORTS_FILE_SUFFIX)
 						.endsWith(TixReceiver.REPORTS_FILE_EXTENSION);
+				assertThat(file.getFileName().toString())
+						.isEqualTo(format(TixReceiver.REPORTS_FILE_NAME_TEMPLATE, reportFirstUnixTimestamp));
 				try (BufferedReader reader = Files.newBufferedReader(file)) {
 					assertThat(reader.lines().count()).isEqualTo(1);
 					reader.lines().forEach(reportLine -> {
