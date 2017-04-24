@@ -54,19 +54,24 @@ public class TestTixReceiver {
 
 	public static byte[] generateMessage() throws InterruptedException {
 		int reports = 10;
+		int unixTimestampSize = Long.BYTES;
+		int packetTypeSize = Character.BYTES;
+		int packetSizeSize = Integer.BYTES;
 		int timestamps = 4;
 		int timestampSize = Long.BYTES;
-		int rowSize = timestamps * timestampSize;
-		byte[] message = new byte[reports * rowSize];
+		int rowSize = unixTimestampSize + packetTypeSize + packetSizeSize + timestampSize * timestamps;
+		ByteBuffer messageBuffer = ByteBuffer.allocate(reports * rowSize);
 		for (int i = 0; i < reports; i++) {
+			messageBuffer.putLong(LocalDateTime.now().toEpochSecond(ZoneOffset.UTC));
+			messageBuffer.putChar((i % 2 == 0 ? 'S' : 'L'));
+			messageBuffer.putInt((i % 2 == 0 ? TixPacketType.SHORT.getSize() : TixPacketType.LONG.getSize()));
 			for (int j = 0; j < timestamps; j++) {
-				byte[] nanosInBytes = ByteBuffer.allocate(timestampSize).putLong(TixCoreUtils.NANOS_OF_DAY.get()).array();
-				for (int k = 0; k < timestampSize; k++) {
-					message[i * rowSize + j * timestampSize + k] = nanosInBytes[k];
-				}
+				messageBuffer.putLong(TixCoreUtils.NANOS_OF_DAY.get());
 				Thread.sleep(5L);
 			}
+			Thread.sleep(1000L - 5L * timestamps);
 		}
+		byte[] message = messageBuffer.array();
 		return message;
 	}
 
