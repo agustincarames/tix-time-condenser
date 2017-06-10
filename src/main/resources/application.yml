@@ -3,6 +3,8 @@ tix-condenser:
     https: false
     host: localhost
     port: 8080
+    user: admin
+    password: admin
   queues:
     receiving:
       name: server-condenser-test
@@ -27,6 +29,9 @@ server:
 spring:
   profiles: staging
 tix-condenser:
+  tix-api:
+    user:
+    password:
   queues:
     receiving:
       name: server-condenser-staging
@@ -34,6 +39,9 @@ tix-condenser:
 spring:
   profiles: production
 tix-condenser:
+  tix-api:
+    user:
+    password:
   queues:
     receiving:
       name: server-condenser-prod

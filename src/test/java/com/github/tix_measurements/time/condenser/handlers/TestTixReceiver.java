@@ -8,6 +8,7 @@ import com.github.tix_measurements.time.condenser.utils.jackson.TixPacketSerDe;
 import com.github.tix_measurements.time.core.data.TixDataPacket;
 import com.github.tix_measurements.time.core.data.TixPacketType;
 import com.github.tix_measurements.time.core.util.TixCoreUtils;
+import org.apache.logging.log4j.util.Strings;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -30,15 +31,19 @@ import java.security.KeyPair;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Comparator;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+import static org.springframework.util.Base64Utils.encodeToString;
 
 public class TestTixReceiver {
 	private static final Path REPORTS_PATH = Paths.get(System.getProperty("java.io.tmpdir"));
@@ -46,6 +51,9 @@ public class TestTixReceiver {
 	private static final String API_HOST = "localhost";
 	private static final int API_PORT = 80;
 	private static final long USER_ID = 1L;
+	private static final String API_USER = "test-admin";
+	private static final String API_PASS = "test-password";
+	private static final String ENCODED_CREDENTIALS = encodeToString(format("%s:%s", API_USER, API_PASS).getBytes());
 	private static final String USERNAME = "test-user";
 	private static final long INSTALLATION_ID = 1L;
 	private static final String INSTALLATION_NAME = "test-installation";
@@ -68,7 +76,8 @@ public class TestTixReceiver {
 		ByteBuffer messageBuffer = ByteBuffer.allocate(reports * rowSize);
 		for (int i = 0; i < reports; i++) {
 			messageBuffer.putLong(LocalDateTime.now().toEpochSecond(ZoneOffset.UTC));
-			messageBuffer.putChar((i % 2 == 0 ? 'S' : 'L'));
+			char packetType = (i % 2 == 0 ? 'S' : 'L');
+			messageBuffer.put((byte)packetType);
 			messageBuffer.putInt((i % 2 == 0 ? TixPacketType.SHORT.getSize() : TixPacketType.LONG.getSize()));
 			for (int j = 0; j < timestamps; j++) {
 				messageBuffer.putLong(TixCoreUtils.NANOS_OF_DAY.get());
@@ -90,7 +99,7 @@ public class TestTixReceiver {
 
 	@Before
 	public void setup() throws InterruptedException {
-		receiver = new TixReceiver(REPORTS_PATH.toString(), USE_HTTPS, API_HOST, API_PORT);
+		receiver = new TixReceiver(REPORTS_PATH.toString(), USE_HTTPS, API_HOST, API_PORT, API_USER, API_PASS);
 		server = MockRestServiceServer.createServer(receiver.getApiClient());
 		message = generateMessage();
 		reportFirstUnixTimestamp = getReportFirstUnixTimestamp(message);
@@ -123,14 +132,40 @@ public class TestTixReceiver {
 	}
 
 	@Test
+	public void testConstructor() {
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> new TixReceiver(null, true, API_HOST, API_PORT, API_USER, API_PASS));
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> new TixReceiver(Strings.EMPTY, true, API_HOST, API_PORT, API_USER, API_PASS));
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> new TixReceiver(REPORTS_PATH.toString(), true, null, API_PORT, API_USER, API_PASS));
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> new TixReceiver(REPORTS_PATH.toString(), true, Strings.EMPTY, API_PORT, API_USER, API_PASS));
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> new TixReceiver(REPORTS_PATH.toString(), true, API_HOST, 0, API_USER, API_PASS));
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> new TixReceiver(REPORTS_PATH.toString(), true, API_HOST, -1, API_USER, API_PASS));
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> new TixReceiver(REPORTS_PATH.toString(), true, API_HOST, API_PORT, null, API_PASS));
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> new TixReceiver(REPORTS_PATH.toString(), true, API_HOST, API_PORT, Strings.EMPTY, API_PASS));
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> new TixReceiver(REPORTS_PATH.toString(), true, API_HOST, API_PORT, API_USER, null));
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> new TixReceiver(REPORTS_PATH.toString(), true, API_HOST, API_PORT, API_USER, Strings.EMPTY));
+	}
+
+	@Test
 	public void testValidPacket() throws IOException, InterruptedException {
 		TixDataPacket packet = createNewPacket(message, USER_ID, INSTALLATION_ID, INSTALLATION_KEY_PAIR);
 		ObjectMapper mapper = new ObjectMapper();
 		server.expect(requestTo(format("http://%s:%d/api/user/%d", API_HOST, API_PORT, USER_ID)))
 				.andExpect(method(HttpMethod.GET))
+				.andExpect(header("Authorization", "Basic " + ENCODED_CREDENTIALS))
 				.andRespond(withSuccess(mapper.writeValueAsString(new TixUser(USER_ID, USERNAME, true)), MediaType.APPLICATION_JSON));
 		server.expect(requestTo(format("http://%s:%d/api/user/%d/installation/%d", API_HOST, API_PORT, USER_ID, INSTALLATION_ID)))
 				.andExpect(method(HttpMethod.GET))
+				.andExpect(header("Authorization", "Basic " + ENCODED_CREDENTIALS))
 				.andRespond(withSuccess(
 						mapper.writeValueAsString(new TixInstallation(INSTALLATION_ID, INSTALLATION_NAME,TixCoreUtils.ENCODER.apply(INSTALLATION_KEY_PAIR.getPublic().getEncoded()))),
 						MediaType.APPLICATION_JSON));
@@ -178,6 +213,7 @@ public class TestTixReceiver {
 		TixDataPacket packet = createNewPacket(message, otherUserId, INSTALLATION_ID, INSTALLATION_KEY_PAIR);
 		server.expect(requestTo(format("http://%s:%d/api/user/%d", API_HOST, API_PORT, otherUserId)))
 				.andExpect(method(HttpMethod.GET))
+				.andExpect(header("Authorization", "Basic " + ENCODED_CREDENTIALS))
 				.andRespond(withStatus(HttpStatus.NOT_FOUND));
 		receiver.receiveMessage(TIX_PACKET_SER_DE.serialize(packet));
 		server.verify();
@@ -192,6 +228,7 @@ public class TestTixReceiver {
 		ObjectMapper mapper = new ObjectMapper();
 		server.expect(requestTo(format("http://%s:%d/api/user/%d", API_HOST, API_PORT, otherUserId)))
 				.andExpect(method(HttpMethod.GET))
+				.andExpect(header("Authorization", "Basic " + ENCODED_CREDENTIALS))
 				.andRespond(withSuccess(mapper.writeValueAsString(new TixUser(otherUserId, USERNAME, false)), MediaType.APPLICATION_JSON));
 		receiver.receiveMessage(TIX_PACKET_SER_DE.serialize(packet));
 		server.verify();
@@ -206,9 +243,11 @@ public class TestTixReceiver {
 		ObjectMapper mapper = new ObjectMapper();
 		server.expect(requestTo(format("http://%s:%d/api/user/%d", API_HOST, API_PORT, USER_ID)))
 				.andExpect(method(HttpMethod.GET))
+				.andExpect(header("Authorization", "Basic " + ENCODED_CREDENTIALS))
 				.andRespond(withSuccess(mapper.writeValueAsString(new TixUser(USER_ID, USERNAME, true)), MediaType.APPLICATION_JSON));
 		server.expect(requestTo(format("http://%s:%d/api/user/%d/installation/%d", API_HOST, API_PORT, USER_ID, otherInstallationId)))
 				.andExpect(method(HttpMethod.GET))
+				.andExpect(header("Authorization", "Basic " + ENCODED_CREDENTIALS))
 				.andRespond(withStatus(HttpStatus.NOT_FOUND));
 		receiver.receiveMessage(TIX_PACKET_SER_DE.serialize(packet));
 		server.verify();
@@ -223,9 +262,11 @@ public class TestTixReceiver {
 		ObjectMapper mapper = new ObjectMapper();
 		server.expect(requestTo(format("http://%s:%d/api/user/%d", API_HOST, API_PORT, USER_ID)))
 				.andExpect(method(HttpMethod.GET))
+				.andExpect(header("Authorization", "Basic " + ENCODED_CREDENTIALS))
 				.andRespond(withSuccess(mapper.writeValueAsString(new TixUser(USER_ID, USERNAME, true)), MediaType.APPLICATION_JSON));
 		server.expect(requestTo(format("http://%s:%d/api/user/%d/installation/%d", API_HOST, API_PORT, USER_ID, INSTALLATION_ID)))
 				.andExpect(method(HttpMethod.GET))
+				.andExpect(header("Authorization", "Basic " + ENCODED_CREDENTIALS))
 				.andRespond(withSuccess(
 						mapper.writeValueAsString(new TixInstallation(INSTALLATION_ID, INSTALLATION_NAME,TixCoreUtils.ENCODER.apply(INSTALLATION_KEY_PAIR.getPublic().getEncoded()))),
 						MediaType.APPLICATION_JSON));

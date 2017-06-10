@@ -5,12 +5,12 @@ import com.github.tix_measurements.time.condenser.model.TixUser;
 import com.github.tix_measurements.time.condenser.utils.jackson.TixPacketSerDe;
 import com.github.tix_measurements.time.core.data.TixDataPacket;
 import com.github.tix_measurements.time.core.util.TixCoreUtils;
+import com.google.common.base.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
@@ -24,13 +24,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.Set;
 
 import static java.lang.String.format;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @Component
 public class TixReceiver {
@@ -46,17 +46,33 @@ public class TixReceiver {
 	private final RestTemplate apiClient;
 	private final Path baseReportsPath;
 	private final String apiPath;
+	private final HttpHeaders headers;
 
 	public TixReceiver(@Value("${tix-condenser.reports.path}") String reportsPath,
 	                   @Value("${tix-condenser.tix-api.https}") boolean useHttps,
 	                   @Value("${tix-condenser.tix-api.host}") String apiHost,
-	                   @Value("${tix-condenser.tix-api.port}") int apiPort) {
+	                   @Value("${tix-condenser.tix-api.port}") int apiPort,
+	                   @Value("${tix-condenser.tix-api.user}") String apiUser,
+	                   @Value("${tix-condenser.tix-api.password}") String apiPassword) {
 		logger.info("Creating TixReceiver");
-		logger.trace("reportsPath={} useHttps={} apiHost={} apiPort={}", reportsPath, useHttps, apiHost, apiPort);
+		logger.trace("reportsPath={} useHttps={} apiHost={} apiPort={} apiUser={} apiPassword={}", reportsPath, useHttps, apiHost, apiPort, apiUser, apiPassword);
+		try {
+			assertThat(reportsPath).isNotEmpty().isNotNull();
+			assertThat(apiHost).isNotEmpty().isNotEmpty();
+			assertThat(apiPort).isPositive();
+			assertThat(apiUser).isNotEmpty().isNotNull();
+			assertThat(apiPassword).isNotEmpty().isNotNull();
+		} catch (AssertionError ae) {
+			throw new IllegalArgumentException(ae);
+		}
 		this.packetSerDe = new TixPacketSerDe();
 		this.apiClient = new RestTemplate();
 		this.baseReportsPath = Paths.get(reportsPath).toAbsolutePath();
 		this.apiPath = format("http%s://%s:%d/api", useHttps ? "s" : "", apiHost, apiPort);
+		this.headers = new HttpHeaders();
+		String credentials = format("%s:%s", apiUser, apiPassword);
+		String base64Credentials = Base64.getEncoder().encodeToString(credentials.getBytes());
+		headers.add("Authorization", "Basic " + base64Credentials);
 	}
 
 	public static Path generateReportPath(Path baseReportsPath, TixDataPacket packet) {
@@ -65,7 +81,8 @@ public class TixReceiver {
 	}
 
 	private boolean validUser(TixDataPacket packet) {
-		ResponseEntity<TixUser> userResponseEntity = apiClient.getForEntity(format(USER_TEMPLATE, apiPath, packet.getUserId()), TixUser.class);
+		HttpEntity<String> request = new HttpEntity<>(this.headers);
+		ResponseEntity<TixUser> userResponseEntity = apiClient.exchange(format(USER_TEMPLATE, apiPath, packet.getUserId()), HttpMethod.GET, request, TixUser.class);
 		boolean okResponseStatus = userResponseEntity.getStatusCode() == HttpStatus.OK;
 		boolean userEnabled = userResponseEntity.getBody().isEnabled();
 		if (!okResponseStatus) {
@@ -78,9 +95,10 @@ public class TixReceiver {
 	}
 
 	private boolean validInstallation(TixDataPacket packet) {
+		HttpEntity<String> request = new HttpEntity<>(this.headers);
 		String userPath = format(USER_TEMPLATE, apiPath, packet.getUserId());
 		ResponseEntity<TixInstallation> installationResponseEntity =
-				apiClient.getForEntity(format(INSTALLATION_TEMPLATE, userPath, packet.getInstallationId()), TixInstallation.class);
+				apiClient.exchange(format(INSTALLATION_TEMPLATE, userPath, packet.getInstallationId()), HttpMethod.GET, request, TixInstallation.class);
 		String packetPk = TixCoreUtils.ENCODER.apply(packet.getPublicKey());
 		return installationResponseEntity.getStatusCode() == HttpStatus.OK &&
 				installationResponseEntity.getBody().getPublicKey().equals(packetPk);

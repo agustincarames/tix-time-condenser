@@ -39,10 +39,12 @@ import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+import static org.springframework.util.Base64Utils.encodeToString;
 
 @RunWith(SpringRunner.class)
 @ActiveProfiles("test")
@@ -70,6 +72,12 @@ public class TestTixCondenser {
 	@Value("${tix-condenser.tix-api.https}")
 	private boolean useHttps;
 
+	@Value("${tix-condenser.tix-api.user}")
+	private String apiUser;
+
+	@Value("${tix-condenser.tix-api.password}")
+	private String apiPassword;
+
 	@Value("${tix-condenser.queues.receiving.name}")
 	private String receivingQueueName;
 
@@ -89,6 +97,7 @@ public class TestTixCondenser {
 	private long userId;
 	private String installationName;
 	private long installationId;
+	private String encodedCredentials;
 
 	@Before
 	public void setup() throws InterruptedException {
@@ -102,6 +111,7 @@ public class TestTixCondenser {
 		userId = 1L;
 		installationName = "test-installation";
 		installationId = 1L;
+		encodedCredentials = encodeToString(format("%s:%s", apiUser, apiPassword).getBytes());
 	}
 
 	@After
@@ -141,9 +151,11 @@ public class TestTixCondenser {
 		ObjectMapper mapper = new ObjectMapper();
 		mockServer.expect(requestTo(format("http%s://%s:%d/api/user/%d", useHttps ? "s" : "", apiHost, apiPort, userId)))
 				.andExpect(method(HttpMethod.GET))
+				.andExpect(header("Authorization", "Basic " + encodedCredentials))
 				.andRespond(withSuccess(mapper.writeValueAsString(new TixUser(userId, username, true)), MediaType.APPLICATION_JSON));
 		mockServer.expect(requestTo(format("http%s://%s:%d/api/user/%d/installation/%d", useHttps ? "s" : "", apiHost, apiPort, userId, installationId)))
 				.andExpect(method(HttpMethod.GET))
+				.andExpect(header("Authorization", "Basic " + encodedCredentials))
 				.andRespond(withSuccess(
 						mapper.writeValueAsString(new TixInstallation(installationId, installationName,TixCoreUtils.ENCODER.apply(installationKeyPair.getPublic().getEncoded()))),
 						MediaType.APPLICATION_JSON));
@@ -192,6 +204,7 @@ public class TestTixCondenser {
 		TixDataPacket packet = TestTixReceiver.createNewPacket(message, otherUserId, installationId, installationKeyPair);
 		mockServer.expect(requestTo(format("http%s://%s:%d/api/user/%d", useHttps? "s": "", apiHost, apiPort, otherUserId)))
 				.andExpect(method(HttpMethod.GET))
+				.andExpect(header("Authorization", "Basic " + encodedCredentials))
 				.andRespond(withStatus(HttpStatus.NOT_FOUND));
 		sendTixPacket(packet);
 		rabbitTemplate.convertAndSend(receivingQueueName, serDe.serialize(packet));
@@ -209,6 +222,7 @@ public class TestTixCondenser {
 		ObjectMapper mapper = new ObjectMapper();
 		mockServer.expect(requestTo(format("http%s://%s:%d/api/user/%d", useHttps? "s": "", apiHost, apiPort, otherUserId)))
 				.andExpect(method(HttpMethod.GET))
+				.andExpect(header("Authorization", "Basic " + encodedCredentials))
 				.andRespond(withSuccess(mapper.writeValueAsString(new TixUser(otherUserId, username, false)), MediaType.APPLICATION_JSON));
 		sendTixPacket(packet);
 		mockServer.verify();
@@ -224,9 +238,11 @@ public class TestTixCondenser {
 		ObjectMapper mapper = new ObjectMapper();
 		mockServer.expect(requestTo(format("http%s://%s:%d/api/user/%d", useHttps? "s": "", apiHost, apiPort, userId)))
 				.andExpect(method(HttpMethod.GET))
+				.andExpect(header("Authorization", "Basic " + encodedCredentials))
 				.andRespond(withSuccess(mapper.writeValueAsString(new TixUser(userId, username, true)), MediaType.APPLICATION_JSON));
 		mockServer.expect(requestTo(format("http%s://%s:%d/api/user/%d/installation/%d", useHttps ? "s" : "", apiHost, apiPort, userId, otherInstallationId)))
 				.andExpect(method(HttpMethod.GET))
+				.andExpect(header("Authorization", "Basic " + encodedCredentials))
 				.andRespond(withStatus(HttpStatus.NOT_FOUND));
 		sendTixPacket(packet);
 		mockServer.verify();
@@ -242,9 +258,11 @@ public class TestTixCondenser {
 		ObjectMapper mapper = new ObjectMapper();
 		mockServer.expect(requestTo(format("http%s://%s:%d/api/user/%d", useHttps? "s": "", apiHost, apiPort, userId)))
 				.andExpect(method(HttpMethod.GET))
+				.andExpect(header("Authorization", "Basic " + encodedCredentials))
 				.andRespond(withSuccess(mapper.writeValueAsString(new TixUser(userId, username, true)), MediaType.APPLICATION_JSON));
 		mockServer.expect(requestTo(format("http%s://%s:%d/api/user/%d/installation/%d", useHttps ? "s" : "", apiHost, apiPort, userId, installationId)))
 				.andExpect(method(HttpMethod.GET))
+				.andExpect(header("Authorization", "Basic " + encodedCredentials))
 				.andRespond(withSuccess(
 						mapper.writeValueAsString(new TixInstallation(installationId, installationName,TixCoreUtils.ENCODER.apply(installationKeyPair.getPublic().getEncoded()))),
 						MediaType.APPLICATION_JSON));
