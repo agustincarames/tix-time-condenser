@@ -2,7 +2,7 @@ tix-condenser:
   tix-api:
     https: false
     host: localhost
-    port: 8080
+    port: 3001
     user: admin
     password: admin
   queues:

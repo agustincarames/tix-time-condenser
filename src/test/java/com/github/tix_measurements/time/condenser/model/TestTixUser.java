@@ -33,44 +33,17 @@ public class TestTixUser {
 	}
 
 	@Test
-	public void testIdGetterAndSetter() {
-		assertThat(user.getId()).isEqualTo(ID);
-		Random random = new Random();
-		long otherId = ID + 1L;
-		user.setId(otherId);
-		assertThat(user.getId()).isEqualTo(otherId);
-	}
-
-	@Test
-	public void testUsernameGetterAndSetter() {
-		assertThat(user.getUsername()).isEqualTo(USERNAME);
-		String otherUsername = RandomStringUtils.randomAlphabetic(USERNAME.length() + 1);
-		user.setUsername(otherUsername);
-		assertThat(user.getUsername()).isEqualTo(otherUsername);
-	}
-
-	@Test
-	public void testEnabledGettersAndSetters() {
-		assertThat(user.isEnabled()).isEqualTo(ENABLED);
-		boolean newEnabled = !ENABLED;
-		user.setEnabled(newEnabled);
-		assertThat(user.isEnabled()).isEqualTo(newEnabled);
-	}
-
-	@Test
 	public void testEquals() {
 		assertThat(user).isNotEqualTo(null);
 		assertThat(user).isNotEqualTo(new Object());
 		assertThat(user).isEqualTo(user);
 		TixUser otherUser = new TixUser(user.getId(), user.getUsername(), user.isEnabled());
 		assertThat(user).isEqualTo(otherUser);
-		otherUser.setEnabled(!otherUser.isEnabled());
+		otherUser = new TixUser(user.getId(), user.getUsername(), !user.isEnabled());
 		assertThat(user).isNotEqualTo(otherUser);
-		otherUser = new TixUser(user.getId(), user.getUsername(), user.isEnabled());
-		otherUser.setUsername(RandomStringUtils.randomAlphabetic(USERNAME.length() + 1));
+		otherUser = new TixUser(user.getId(), RandomStringUtils.randomAlphabetic(USERNAME.length() + 1), user.isEnabled());
 		assertThat(user).isNotEqualTo(otherUser);
-		otherUser = new TixUser(user.getId(), user.getUsername(), user.isEnabled());
-		otherUser.setId(otherUser.getId() + 1);
+		otherUser = new TixUser(user.getId() + 1, user.getUsername(), user.isEnabled());
 		assertThat(user).isNotEqualTo(otherUser);
 	}
 
@@ -78,13 +51,11 @@ public class TestTixUser {
 	public void testHashCode() {
 		TixUser otherUser = new TixUser(user.getId(), user.getUsername(), user.isEnabled());
 		assertThat(user.hashCode()).isEqualTo(otherUser.hashCode());
-		otherUser.setEnabled(!otherUser.isEnabled());
+		otherUser = new TixUser(user.getId(), user.getUsername(), !user.isEnabled());
 		assertThat(user.hashCode()).isNotEqualTo(otherUser.hashCode());
-		otherUser = new TixUser(user.getId(), user.getUsername(), user.isEnabled());
-		otherUser.setUsername(RandomStringUtils.randomAlphabetic(USERNAME.length() + 1));
+		otherUser = new TixUser(user.getId(), RandomStringUtils.randomAlphabetic(USERNAME.length() + 1), user.isEnabled());
 		assertThat(user.hashCode()).isNotEqualTo(otherUser.hashCode());
-		otherUser = new TixUser(user.getId(), user.getUsername(), user.isEnabled());
-		otherUser.setId(otherUser.getId() + 1);
+		otherUser = new TixUser(user.getId() + 1, user.getUsername(), user.isEnabled());
 		assertThat(user.hashCode()).isNotEqualTo(otherUser.hashCode());
 	}
 }

@@ -1,5 +1,7 @@
 package com.github.tix_measurements.time.condenser.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
@@ -10,9 +12,11 @@ public class TixInstallation {
 	private String name;
 	private String publicKey;
 
-	public TixInstallation() { /* Needed by Jackson */ }
-
-	public TixInstallation(long id, String name, String publicKey) {
+	@JsonCreator
+	public TixInstallation(
+			@JsonProperty("id") long id,
+			@JsonProperty("name") String name,
+			@JsonProperty("publickey") String publicKey) {
 		try {
 			assertThat(id).isPositive();
 			assertThat(name).isNotEmpty().isNotNull();
@@ -29,24 +33,12 @@ public class TixInstallation {
 		return id;
 	}
 
-	public void setId(long id) {
-		this.id = id;
-	}
-
 	public String getName() {
 		return name;
 	}
 
-	public void setName(String name) {
-		this.name = name;
-	}
-
 	public String getPublicKey() {
 		return publicKey;
-	}
-
-	public void setPublicKey(String publicKey) {
-		this.publicKey = publicKey;
 	}
 
 	@Override

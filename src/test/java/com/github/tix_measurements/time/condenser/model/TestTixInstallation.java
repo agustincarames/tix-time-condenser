@@ -41,31 +41,6 @@ public class TestTixInstallation {
 	}
 
 	@Test
-	public void testIdGetterAndSetter() {
-		assertThat(installation.getId()).isEqualTo(ID);
-		long otherId = ID + 1;
-		installation.setId(otherId);
-		assertThat(installation.getId()).isEqualTo(otherId);
-	}
-
-	@Test
-	public void testNameGetterAndSetter() {
-		assertThat(installation.getName()).isEqualTo(INSTALLATION_NAME);
-		String otherName = RandomStringUtils.randomAlphabetic(10);
-		installation.setName(otherName);
-		assertThat(installation.getName()).isEqualTo(otherName);
-	}
-
-	@Test
-	public void testPublicKeyGetterAndSetter() {
-		assertThat(installation.getPublicKey()).isEqualTo(PUBLIC_KEY);
-		KeyPair otherKeyPair = TixCoreUtils.NEW_KEY_PAIR.get();
-		String otherPublicKey = TixCoreUtils.ENCODER.apply(otherKeyPair.getPublic().getEncoded());
-		installation.setPublicKey(otherPublicKey);
-		assertThat(installation.getPublicKey()).isEqualTo(otherPublicKey);
-	}
-
-	@Test
 	public void testEquals() {
 		assertThat(installation).isNotEqualTo(null);
 		assertThat(installation).isNotEqualTo(new Object());

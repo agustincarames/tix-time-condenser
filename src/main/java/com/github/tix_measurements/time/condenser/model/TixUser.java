@@ -1,5 +1,7 @@
 package com.github.tix_measurements.time.condenser.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
@@ -10,9 +12,11 @@ public class TixUser {
 	private String username;
 	private boolean enabled;
 
-	public TixUser() { /* Required by Jackson */ }
-
-	public TixUser(long id, String username, boolean enabled) {
+	@JsonCreator
+	public TixUser(
+			@JsonProperty("id") long id,
+			@JsonProperty("username") String username,
+			@JsonProperty("enabled") boolean enabled) {
 		try {
 			assertThat(id).isPositive();
 			assertThat(username).isNotNull().isNotEmpty();
@@ -28,24 +32,12 @@ public class TixUser {
 		return id;
 	}
 
-	public void setId(long id) {
-		this.id = id;
-	}
-
 	public String getUsername() {
 		return username;
 	}
 
-	public void setUsername(String username) {
-		this.username = username;
-	}
-
 	public boolean isEnabled() {
 		return enabled;
-	}
-
-	public void setEnabled(boolean enabled) {
-		this.enabled = enabled;
 	}
 
 	@Override
