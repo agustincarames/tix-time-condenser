@@ -100,7 +100,18 @@ public class TixReceiver {
 		ResponseEntity<TixInstallation> installationResponseEntity =
 				apiClient.exchange(format(INSTALLATION_TEMPLATE, userPath, packet.getInstallationId()), HttpMethod.GET, request, TixInstallation.class);
 		String packetPk = TixCoreUtils.ENCODER.apply(packet.getPublicKey());
+		boolean okResponseStatus = installationResponseEntity.getStatusCode() == HttpStatus.OK;
+		boolean publicKeyMatch = !Strings.isNullOrEmpty(installationResponseEntity.getBody().getPublicKey()) &&
+				installationResponseEntity.getBody().getPublicKey().equals(packetPk);
+		if (!okResponseStatus) {
+			logger.warn("Response status is not 200 OK");
+		}
+		if (!publicKeyMatch) {
+			logger.warn(format("Installation Public Key do not match with packet Public Key.\nInstallation Public Key %s\nPacket Public Key %s",
+					installationResponseEntity.getBody().getPublicKey(), packetPk));
+		}
 		return installationResponseEntity.getStatusCode() == HttpStatus.OK &&
+				!Strings.isNullOrEmpty(installationResponseEntity.getBody().getPublicKey()) &&
 				installationResponseEntity.getBody().getPublicKey().equals(packetPk);
 	}
 
@@ -120,13 +131,10 @@ public class TixReceiver {
 					logger.debug("packet={}", packet);
 					Path reportDirectory = generateReportPath(baseReportsPath, packet);
 					logger.debug("reportDirectory={}", reportDirectory);
-					if (!Files.exists(reportDirectory) && Files.notExists(reportDirectory)) {
+					if (!Files.exists(reportDirectory)) {
 						logger.info("Creating reports directory");
 						Files.createDirectories(reportDirectory,
 								PosixFilePermissions.asFileAttribute(REPORTS_DIRECTORIES_PERMISSIONS));
-					} else {
-						logger.error("Cannot assert directory existence, Maybe privilege issues?");
-						throw new Error("Cannot assert directory existence. Maybe privilege issues?");
 					}
 					long firstReportTimestamp = getFirstReportTimestamp(packet);
 					Path reportPath = reportDirectory.resolve(format(REPORTS_FILE_NAME_TEMPLATE, firstReportTimestamp));
