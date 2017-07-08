@@ -101,18 +101,22 @@ public class TixReceiver {
 				apiClient.exchange(format(INSTALLATION_TEMPLATE, userPath, packet.getInstallationId()), HttpMethod.GET, request, TixInstallation.class);
 		String packetPk = TixCoreUtils.ENCODER.apply(packet.getPublicKey());
 		boolean okResponseStatus = installationResponseEntity.getStatusCode() == HttpStatus.OK;
-		boolean publicKeyMatch = !Strings.isNullOrEmpty(installationResponseEntity.getBody().getPublicKey()) &&
-				installationResponseEntity.getBody().getPublicKey().equals(packetPk);
 		if (!okResponseStatus) {
 			logger.warn("Response status is not 200 OK");
+			return false;
 		}
+		if (installationResponseEntity.getBody() == null) {
+			logger.warn("Response body is empty!");
+			return false;
+		}
+		boolean publicKeyMatch = !Strings.isNullOrEmpty(installationResponseEntity.getBody().getPublicKey()) &&
+				installationResponseEntity.getBody().getPublicKey().equals(packetPk);
 		if (!publicKeyMatch) {
 			logger.warn(format("Installation Public Key do not match with packet Public Key.\nInstallation Public Key %s\nPacket Public Key %s",
 					installationResponseEntity.getBody().getPublicKey(), packetPk));
+			return false;
 		}
-		return installationResponseEntity.getStatusCode() == HttpStatus.OK &&
-				!Strings.isNullOrEmpty(installationResponseEntity.getBody().getPublicKey()) &&
-				installationResponseEntity.getBody().getPublicKey().equals(packetPk);
+		return true;
 	}
 
 	private boolean validUserAndInstallation(TixDataPacket packet) {
@@ -162,7 +166,7 @@ public class TixReceiver {
 			logger.error("Exception caught", ioe);
 			throw new IllegalArgumentException(ioe);
 		} catch (HttpClientErrorException hcee) {
-			logger.error("Cilent Error caught", hcee);
+			logger.error("Client Error caught", hcee);
 			if (hcee.getStatusCode() == HttpStatus.NOT_FOUND) {
 				logger.info("Discarding error silently");
 			} else {
