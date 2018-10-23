@@ -1,24 +1,20 @@
-FROM ubuntu:xenial
-MAINTAINER Facundo Martinez <fnmartinez88@gmail.com>
+FROM gradle:jdk8-alpine
 
-ENV DEBIAN_FRONTEND noninteractive
+# Install app dependencies
+WORKDIR /home/gradle
+COPY settings.gradle build.gradle ./
+RUN gradle getDeps
 
-# Installing basic utils for software language installation and logging
-RUN apt-get update -y \
-	&& apt-get install -y \
-			software-properties-common \
-			curl
+# Build app
+COPY src ./src
+RUN gradle bootRepackage \
+	&& cp build/libs/*.jar /home/gradle/tix-time-condenser.jar
 
-# Installing and setting up software and properties specific to the Java Language
-RUN echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | /usr/bin/debconf-set-selections
-RUN add-apt-repository ppa:webupd8team/java \
-	&& apt-get update \
-	&& apt-get install -y oracle-java8-installer \
-	&& apt-get install -y oracle-java8-set-default
-
-RUN mkdir -p /root/tix-time-condenser
-COPY tix-time-condenser.jar /root/tix-time-condenser
-COPY run.sh /root/tix-time-condenser
-WORKDIR /root/tix-time-condenser
-
-ENTRYPOINT ["./run.sh"]
+# Bundle compiled app into target image
+FROM openjdk:8-jre-alpine
+WORKDIR /root
+RUN apk add bash
+COPY run.sh .
+COPY wait-for-it.sh .
+COPY --from=0 /home/gradle/tix-time-condenser.jar .
+CMD ["./run.sh"]
