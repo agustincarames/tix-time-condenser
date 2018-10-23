@@ -10,6 +10,12 @@
 # IntelliJ
 /out/
 
+### Eclipse template
+.classpath
+.project
+.settings/
+bin/
+
 ### Gradle template
 .gradle
 build/
