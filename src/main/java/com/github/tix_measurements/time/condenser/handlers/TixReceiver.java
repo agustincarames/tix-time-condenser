@@ -36,7 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TixReceiver {
 	private static final Set<PosixFilePermission> REPORTS_DIRECTORIES_PERMISSIONS = Collections.unmodifiableSet(PosixFilePermissions.fromString("rwxr-x---"));
 	public static final String USER_TEMPLATE = "%s/user/%d";
-	public static final String INSTALLATION_TEMPLATE = "%s/installation/%d";
+	public static final String INSTALLATION_TEMPLATE = "%s/user/%d/installation/%d";
 	public static final String REPORTS_FILE_SUFFIX = "tix-report";
 	public static final String REPORTS_FILE_EXTENSION = "json";
 	public static final String REPORTS_FILE_NAME_TEMPLATE = format("%s-%%d.%s", REPORTS_FILE_SUFFIX, REPORTS_FILE_EXTENSION);
@@ -51,17 +51,13 @@ public class TixReceiver {
 	public TixReceiver(@Value("${tix-condenser.reports.path}") String reportsPath,
 	                   @Value("${tix-condenser.tix-api.https}") boolean useHttps,
 	                   @Value("${tix-condenser.tix-api.host}") String apiHost,
-	                   @Value("${tix-condenser.tix-api.port}") int apiPort,
-	                   @Value("${tix-condenser.tix-api.user}") String apiUser,
-	                   @Value("${tix-condenser.tix-api.password}") String apiPassword) {
+	                   @Value("${tix-condenser.tix-api.port}") int apiPort) {
 		logger.info("Creating TixReceiver");
-		logger.trace("reportsPath={} useHttps={} apiHost={} apiPort={} apiUser={} apiPassword={}", reportsPath, useHttps, apiHost, apiPort, apiUser, apiPassword);
+		logger.trace("reportsPath={} useHttps={} apiHost={} apiPort={}", reportsPath, useHttps, apiHost, apiPort);
 		try {
 			assertThat(reportsPath).isNotEmpty().isNotNull();
 			assertThat(apiHost).isNotEmpty().isNotEmpty();
 			assertThat(apiPort).isPositive();
-			assertThat(apiUser).isNotEmpty().isNotNull();
-			assertThat(apiPassword).isNotEmpty().isNotNull();
 		} catch (AssertionError ae) {
 			throw new IllegalArgumentException(ae);
 		}
@@ -70,9 +66,6 @@ public class TixReceiver {
 		this.baseReportsPath = Paths.get(reportsPath).toAbsolutePath();
 		this.apiPath = format("http%s://%s:%d/api", useHttps ? "s" : "", apiHost, apiPort);
 		this.headers = new HttpHeaders();
-		String credentials = format("%s:%s", apiUser, apiPassword);
-		String base64Credentials = Base64.getEncoder().encodeToString(credentials.getBytes());
-		headers.add("Authorization", "Basic " + base64Credentials);
 	}
 
 	public static Path generateReportPath(Path baseReportsPath, TixDataPacket packet) {
@@ -96,9 +89,8 @@ public class TixReceiver {
 
 	private boolean validInstallation(TixDataPacket packet) {
 		HttpEntity<String> request = new HttpEntity<>(this.headers);
-		String userPath = format(USER_TEMPLATE, apiPath, packet.getUserId());
 		ResponseEntity<TixInstallation> installationResponseEntity =
-				apiClient.exchange(format(INSTALLATION_TEMPLATE, userPath, packet.getInstallationId()), HttpMethod.GET, request, TixInstallation.class);
+				apiClient.exchange(format(INSTALLATION_TEMPLATE, apiPath, packet.getUserId(), packet.getInstallationId()), HttpMethod.GET, request, TixInstallation.class);
 		String packetPk = TixCoreUtils.ENCODER.apply(packet.getPublicKey());
 		boolean okResponseStatus = installationResponseEntity.getStatusCode() == HttpStatus.OK;
 		if (!okResponseStatus) {
