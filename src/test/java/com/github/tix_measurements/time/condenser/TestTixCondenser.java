@@ -3,6 +3,7 @@ package com.github.tix_measurements.time.condenser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tix_measurements.time.condenser.handlers.TestTixReceiver;
+import com.github.tix_measurements.time.condenser.handlers.TixPackageValidator;
 import com.github.tix_measurements.time.condenser.handlers.TixReceiver;
 import com.github.tix_measurements.time.condenser.model.TixInstallation;
 import com.github.tix_measurements.time.condenser.model.TixUser;
@@ -61,6 +62,8 @@ public class TestTixCondenser {
 	private RabbitTemplate rabbitTemplate;
 
 	@Autowired
+	private TixPackageValidator packageValidator;
+	
 	private TixReceiver tixReceiver;
 
 	@Value("${tix-condenser.tix-api.host}")
@@ -102,7 +105,8 @@ public class TestTixCondenser {
 	@Before
 	public void setup() throws InterruptedException {
 		serDe = new TixPacketSerDe();
-		mockServer = MockRestServiceServer.createServer(tixReceiver.getApiClient());
+		tixReceiver = new TixReceiver(reportsPathString, packageValidator);
+		mockServer = MockRestServiceServer.createServer(packageValidator.getApiClient());
 		installationKeyPair = TixCoreUtils.NEW_KEY_PAIR.get();
 		reportsPath = Paths.get(reportsPathString);
 		message = TestTixReceiver.generateMessage();

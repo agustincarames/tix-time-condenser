@@ -4,12 +4,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tix_measurements.time.condenser.model.TixInstallation;
 import com.github.tix_measurements.time.condenser.model.TixUser;
-import com.github.tix_measurements.time.condenser.utils.jackson.TixPacketSerDe;
 import com.github.tix_measurements.time.core.data.TixDataPacket;
 import com.github.tix_measurements.time.core.data.TixPacketType;
 import com.github.tix_measurements.time.core.util.TixCoreUtils;
 import org.apache.logging.log4j.util.Strings;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.http.HttpMethod;
@@ -17,33 +15,25 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 
-import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.security.KeyPair;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.junit.Assert.assertFalse;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-public class TestTixReceiver {
-	private static final Path REPORTS_PATH = Paths.get(System.getProperty("java.io.tmpdir"));
+public class TestTixPackageValidator {
 	private static final boolean USE_HTTPS = false;
 	private static final String API_HOST = "localhost";
 	private static final int API_PORT = 80;
@@ -52,13 +42,10 @@ public class TestTixReceiver {
 	private static final long INSTALLATION_ID = 1L;
 	private static final String INSTALLATION_NAME = "test-installation";
 	private static final KeyPair INSTALLATION_KEY_PAIR = TixCoreUtils.NEW_KEY_PAIR.get();
-	private static final TixPacketSerDe TIX_PACKET_SER_DE = new TixPacketSerDe();
 
 	private MockRestServiceServer server;
 	private TixPackageValidator packageValidator;
-	private TixReceiver receiver;
-	private byte[] message;
-	private long reportFirstUnixTimestamp;    
+	private byte[] message;   
 	
 	//@Rule
     //public Timeout globalTimeout = Timeout.millis(5000);
@@ -87,21 +74,11 @@ public class TestTixReceiver {
 		return message;
 	}
 
-	public static long getReportFirstUnixTimestamp(byte[] message) {
-		ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
-		byte[] bytes = Arrays.copyOfRange(message, 0, Long.BYTES);
-		buffer.put(bytes);
-		buffer.flip();
-		return buffer.getLong();
-	}
-
 	@Before
 	public void setup() throws InterruptedException {
 		packageValidator = new TixPackageValidator(USE_HTTPS, API_HOST, API_PORT);
-		receiver = new TixReceiver(REPORTS_PATH.toString(), packageValidator);
 		server = MockRestServiceServer.createServer(packageValidator.getApiClient());
 		message = generateMessage();
-		reportFirstUnixTimestamp = getReportFirstUnixTimestamp(message);
 	}
 
 	public static TixDataPacket createNewPacket(byte[] message, long userId, long installationId, KeyPair keyPair) throws UnknownHostException, InterruptedException {
@@ -119,23 +96,16 @@ public class TestTixReceiver {
 		return packet;
 	}
 
-	@After
-	public void teardown() throws IOException {
-		if (REPORTS_PATH.resolve(Long.toString(USER_ID)).toFile().exists()) {
-			Files.walk(REPORTS_PATH.resolve(Long.toString(USER_ID)))
-					.sorted(Comparator.reverseOrder())
-					.map(Path::toFile)
-					.peek(System.out::println)
-					.forEach(File::delete);
-		}
-	}
-
 	@Test
 	public void testConstructor() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
-				.isThrownBy(() -> new TixReceiver(null, packageValidator));
+				.isThrownBy(() -> new TixPackageValidator(true, null, API_PORT));
 		assertThatExceptionOfType(IllegalArgumentException.class)
-				.isThrownBy(() -> new TixReceiver(Strings.EMPTY, packageValidator));
+				.isThrownBy(() -> new TixPackageValidator(true, Strings.EMPTY, API_PORT));
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> new TixPackageValidator(true, API_HOST, 0));
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> new TixPackageValidator(true, API_HOST, -1));
 	}
 
 	@Test
@@ -150,42 +120,9 @@ public class TestTixReceiver {
 				.andRespond(withSuccess(
 						mapper.writeValueAsString(new TixInstallation(INSTALLATION_ID, INSTALLATION_NAME,TixCoreUtils.ENCODER.apply(INSTALLATION_KEY_PAIR.getPublic().getEncoded()))),
 						MediaType.APPLICATION_JSON));
-		receiver.receiveMessage(TIX_PACKET_SER_DE.serialize(packet));
+		
+		assertThat(packageValidator.validUserAndInstallation(packet));
 		server.verify();
-		Path expectedReportPath = TixReceiver.generateReportPath(REPORTS_PATH, packet);
-		assertThat(expectedReportPath)
-				.exists()
-				.isDirectory();
-		assertThat(Files.walk(expectedReportPath).count()).isEqualTo(2);
-		final TixDataPacket expectedPacket = packet;
-		try (Stream<Path> paths = Files.walk(expectedReportPath)) {
-			paths.forEach(file -> {
-				if (file.equals(expectedReportPath)) {
-					return;
-				}
-				assertThat(file)
-						.exists()
-						.isRegularFile();
-				assertThat(file.getFileName().toString())
-						.startsWith(TixReceiver.REPORTS_FILE_SUFFIX)
-						.endsWith(TixReceiver.REPORTS_FILE_EXTENSION);
-				assertThat(file.getFileName().toString())
-						.isEqualTo(format(TixReceiver.REPORTS_FILE_NAME_TEMPLATE, reportFirstUnixTimestamp));
-				try (BufferedReader reader = Files.newBufferedReader(file)) {
-					assertThat(reader.lines().count()).isEqualTo(1);
-					reader.lines().forEach(reportLine -> {
-						try {
-							TixDataPacket filePacket = TIX_PACKET_SER_DE.deserialize(reportLine.getBytes());
-							assertThat(filePacket).isEqualTo(expectedPacket);
-						} catch (IOException e) {
-							throw new AssertionError(e);
-						}
-					});
-				} catch (IOException e) {
-					throw new AssertionError(e);
-				}
-			});
-		}
 	}
 
 	@Test
@@ -195,10 +132,9 @@ public class TestTixReceiver {
 		server.expect(requestTo(format("http://%s:%d/api/user/%d", API_HOST, API_PORT, otherUserId)))
 				.andExpect(method(HttpMethod.GET))
 				.andRespond(withStatus(HttpStatus.NOT_FOUND));
-		receiver.receiveMessage(TIX_PACKET_SER_DE.serialize(packet));
+		
+		assertFalse(packageValidator.validUserAndInstallation(packet));
 		server.verify();
-		Path expectedReportPath = TixReceiver.generateReportPath(REPORTS_PATH, packet);
-		assertThat(expectedReportPath).doesNotExist();
 	}
 
 	@Test
@@ -209,10 +145,9 @@ public class TestTixReceiver {
 		server.expect(requestTo(format("http://%s:%d/api/user/%d", API_HOST, API_PORT, otherUserId)))
 				.andExpect(method(HttpMethod.GET))
 				.andRespond(withSuccess(mapper.writeValueAsString(new TixUser(otherUserId, USERNAME, false)), MediaType.APPLICATION_JSON));
-		receiver.receiveMessage(TIX_PACKET_SER_DE.serialize(packet));
+		
+		assertFalse(packageValidator.validUserAndInstallation(packet));
 		server.verify();
-		Path expectedReportPath = TixReceiver.generateReportPath(REPORTS_PATH, packet);
-		assertThat(expectedReportPath).doesNotExist();
 	}
 
 	@Test
@@ -226,10 +161,9 @@ public class TestTixReceiver {
 		server.expect(requestTo(format("http://%s:%d/api/user/%d/installation/%d", API_HOST, API_PORT, USER_ID, otherInstallationId)))
 				.andExpect(method(HttpMethod.GET))
 				.andRespond(withStatus(HttpStatus.NOT_FOUND));
-		receiver.receiveMessage(TIX_PACKET_SER_DE.serialize(packet));
+		
+		assertFalse(packageValidator.validUserAndInstallation(packet));
 		server.verify();
-		Path expectedReportPath = TixReceiver.generateReportPath(REPORTS_PATH, packet);
-		assertThat(expectedReportPath).doesNotExist();
 	}
 
 	@Test
@@ -245,9 +179,8 @@ public class TestTixReceiver {
 				.andRespond(withSuccess(
 						mapper.writeValueAsString(new TixInstallation(INSTALLATION_ID, INSTALLATION_NAME,TixCoreUtils.ENCODER.apply(INSTALLATION_KEY_PAIR.getPublic().getEncoded()))),
 						MediaType.APPLICATION_JSON));
-		receiver.receiveMessage(TIX_PACKET_SER_DE.serialize(packet));
+		
+		assertFalse(packageValidator.validUserAndInstallation(packet));
 		server.verify();
-		Path expectedReportPath = TixReceiver.generateReportPath(REPORTS_PATH, packet);
-		assertThat(expectedReportPath).doesNotExist();
 	}
 }
