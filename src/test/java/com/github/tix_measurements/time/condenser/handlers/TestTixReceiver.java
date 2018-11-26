@@ -1,12 +1,12 @@
 package com.github.tix_measurements.time.condenser.handlers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.tix_measurements.time.condenser.PackageGenerator;
 import com.github.tix_measurements.time.condenser.model.TixInstallation;
 import com.github.tix_measurements.time.condenser.model.TixUser;
 import com.github.tix_measurements.time.condenser.store.MeasurementStore;
 import com.github.tix_measurements.time.condenser.utils.jackson.TixPacketSerDe;
 import com.github.tix_measurements.time.core.data.TixDataPacket;
-import com.github.tix_measurements.time.core.data.TixPacketType;
 import com.github.tix_measurements.time.core.util.TixCoreUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -16,13 +16,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
 import java.security.KeyPair;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -47,34 +41,9 @@ public class TestTixReceiver {
 	private MeasurementStore measurementStore;
 	private TixPackageValidator packageValidator;
 	private TixReceiver receiver;
-	private byte[] message;
 	
 	//@Rule
     //public Timeout globalTimeout = Timeout.millis(5000);
-
-	public static byte[] generateMessage() throws InterruptedException {
-		int reports = 10;
-		int unixTimestampSize = Long.BYTES;
-		int packetTypeSize = Character.BYTES;
-		int packetSizeSize = Integer.BYTES;
-		int timestamps = 4;
-		int timestampSize = Long.BYTES;
-		int rowSize = unixTimestampSize + packetTypeSize + packetSizeSize + timestampSize * timestamps;
-		ByteBuffer messageBuffer = ByteBuffer.allocate(reports * rowSize);
-		for (int i = 0; i < reports; i++) {
-			messageBuffer.putLong(LocalDateTime.now().toEpochSecond(ZoneOffset.UTC));
-			char packetType = (i % 2 == 0 ? 'S' : 'L');
-			messageBuffer.put((byte)packetType);
-			messageBuffer.putInt((i % 2 == 0 ? TixPacketType.SHORT.getSize() : TixPacketType.LONG.getSize()));
-			for (int j = 0; j < timestamps; j++) {
-				messageBuffer.putLong(TixCoreUtils.NANOS_OF_DAY.get());
-				Thread.sleep(5L);
-			}
-			Thread.sleep(1000L - 5L * timestamps);
-		}
-		byte[] message = messageBuffer.array();
-		return message;
-	}
 
 	@Before
 	public void setup() throws InterruptedException {
@@ -82,22 +51,6 @@ public class TestTixReceiver {
 		measurementStore = mock(MeasurementStore.class);
 		receiver = new TixReceiver(measurementStore, packageValidator);
 		server = MockRestServiceServer.createServer(packageValidator.getApiClient());
-		message = generateMessage();
-	}
-
-	public static TixDataPacket createNewPacket(byte[] message, long userId, long installationId, KeyPair keyPair) throws UnknownHostException, InterruptedException {
-		TixDataPacket packet = new TixDataPacket(
-				new InetSocketAddress(InetAddress.getLocalHost(), 4500),
-				new InetSocketAddress(InetAddress.getByName("8.8.8.8"), 4500),
-				TixCoreUtils.NANOS_OF_DAY.get(),
-				userId,
-				installationId,
-				keyPair.getPublic().getEncoded(),
-				message,
-				TixCoreUtils.sign(message, keyPair));
-		Thread.sleep(5L);
-		packet.setReceptionTimestamp(TixCoreUtils.NANOS_OF_DAY.get());
-		return packet;
 	}
 
 	@Test
@@ -110,7 +63,7 @@ public class TestTixReceiver {
 
 	@Test
 	public void testValidPacket() throws IOException, InterruptedException {
-		TixDataPacket packet = createNewPacket(message, USER_ID, INSTALLATION_ID, INSTALLATION_KEY_PAIR);
+		TixDataPacket packet = PackageGenerator.createNewPacket(USER_ID, INSTALLATION_ID, INSTALLATION_KEY_PAIR);
 		ObjectMapper mapper = new ObjectMapper();
 		server.expect(requestTo(format("http://%s:%d/api/user/%d", API_HOST, API_PORT, USER_ID)))
 				.andExpect(method(HttpMethod.GET))
@@ -130,7 +83,7 @@ public class TestTixReceiver {
 	@Test
 	public void testInvalidUser() throws Exception {
 		long otherUserId = USER_ID + 1L;
-		TixDataPacket packet = createNewPacket(message, otherUserId, INSTALLATION_ID, INSTALLATION_KEY_PAIR);
+		TixDataPacket packet = PackageGenerator.createNewPacket(otherUserId, INSTALLATION_ID, INSTALLATION_KEY_PAIR);
 		server.expect(requestTo(format("http://%s:%d/api/user/%d", API_HOST, API_PORT, otherUserId)))
 				.andExpect(method(HttpMethod.GET))
 				.andRespond(withStatus(HttpStatus.NOT_FOUND));
@@ -144,7 +97,7 @@ public class TestTixReceiver {
 	@Test
 	public void testDisabledUser() throws Exception {
 		long otherUserId = USER_ID + 1L;
-		TixDataPacket packet = createNewPacket(message, otherUserId, INSTALLATION_ID, INSTALLATION_KEY_PAIR);
+		TixDataPacket packet = PackageGenerator.createNewPacket(otherUserId, INSTALLATION_ID, INSTALLATION_KEY_PAIR);
 		ObjectMapper mapper = new ObjectMapper();
 		server.expect(requestTo(format("http://%s:%d/api/user/%d", API_HOST, API_PORT, otherUserId)))
 				.andExpect(method(HttpMethod.GET))
@@ -159,7 +112,7 @@ public class TestTixReceiver {
 	@Test
 	public void testInvalidInstallation() throws Exception {
 		long otherInstallationId = INSTALLATION_ID + 1L;
-		TixDataPacket packet = createNewPacket(message, USER_ID, otherInstallationId, INSTALLATION_KEY_PAIR);
+		TixDataPacket packet = PackageGenerator.createNewPacket(USER_ID, otherInstallationId, INSTALLATION_KEY_PAIR);
 		ObjectMapper mapper = new ObjectMapper();
 		server.expect(requestTo(format("http://%s:%d/api/user/%d", API_HOST, API_PORT, USER_ID)))
 				.andExpect(method(HttpMethod.GET))
@@ -177,7 +130,7 @@ public class TestTixReceiver {
 	@Test
 	public void testInstallationPublicKey() throws Exception {
 		KeyPair otherKeyPair = TixCoreUtils.NEW_KEY_PAIR.get();
-		TixDataPacket packet = createNewPacket(message, USER_ID, INSTALLATION_ID, otherKeyPair);
+		TixDataPacket packet = PackageGenerator.createNewPacket(USER_ID, INSTALLATION_ID, otherKeyPair);
 		ObjectMapper mapper = new ObjectMapper();
 		server.expect(requestTo(format("http://%s:%d/api/user/%d", API_HOST, API_PORT, USER_ID)))
 				.andExpect(method(HttpMethod.GET))

@@ -2,7 +2,6 @@ package com.github.tix_measurements.time.condenser;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.tix_measurements.time.condenser.handlers.TestTixReceiver;
 import com.github.tix_measurements.time.condenser.handlers.TixPackageValidator;
 import com.github.tix_measurements.time.condenser.handlers.TixReceiver;
 import com.github.tix_measurements.time.condenser.model.TixInstallation;
@@ -98,8 +97,6 @@ public class TestTixCondenser {
 	private MockRestServiceServer mockServer;
 	private KeyPair installationKeyPair;
 	private Path reportsPath;
-	private byte[] message;
-	private long reportFirstUnixTimestamp;
 	private String username;
 	private long userId;
 	private String installationName;
@@ -122,8 +119,6 @@ public class TestTixCondenser {
 		mockServer = MockRestServiceServer.createServer(packageValidator.getApiClient());
 		installationKeyPair = TixCoreUtils.NEW_KEY_PAIR.get();
 		reportsPath = Paths.get(reportsPathString);
-		message = TestTixReceiver.generateMessage();
-		reportFirstUnixTimestamp = TestTixCondenser.getReportFirstUnixTimestamp(message);
 		username = "test-user";
 		userId = 1L;
 		installationName = "test-installation";
@@ -164,7 +159,7 @@ public class TestTixCondenser {
 	@Test
 	@DirtiesContext
 	public void testValidPacket() throws InterruptedException, IOException {
-		TixDataPacket packet = TestTixReceiver.createNewPacket(message, userId, installationId, installationKeyPair);
+		TixDataPacket packet = PackageGenerator.createNewPacket(userId, installationId, installationKeyPair);
 		ObjectMapper mapper = new ObjectMapper();
 		mockServer.expect(requestTo(format("http%s://%s:%d/api/user/%d", useHttps ? "s" : "", apiHost, apiPort, userId)))
 				.andExpect(method(HttpMethod.GET))
@@ -196,7 +191,7 @@ public class TestTixCondenser {
 						.startsWith(MeasurementStore.REPORTS_FILE_SUFFIX)
 						.endsWith(MeasurementStore.REPORTS_FILE_EXTENSION);
 				assertThat(file.getFileName().toString())
-						.isEqualTo(format(MeasurementStore.REPORTS_FILE_NAME_TEMPLATE, reportFirstUnixTimestamp));
+						.isEqualTo(format(MeasurementStore.REPORTS_FILE_NAME_TEMPLATE, PackageGenerator.FIRST_UNIX_TIMESTAMP));
 				try (BufferedReader reader = Files.newBufferedReader(file)) {
 					assertThat(reader.lines().count()).isEqualTo(1);
 					reader.lines().forEach(reportLine -> {
@@ -218,7 +213,7 @@ public class TestTixCondenser {
 	@DirtiesContext
 	public void testInvalidUser() throws JsonProcessingException, InterruptedException, UnknownHostException {
 		long otherUserId = userId + 1L;
-		TixDataPacket packet = TestTixReceiver.createNewPacket(message, otherUserId, installationId, installationKeyPair);
+		TixDataPacket packet = PackageGenerator.createNewPacket(otherUserId, installationId, installationKeyPair);
 		mockServer.expect(requestTo(format("http%s://%s:%d/api/user/%d", useHttps? "s": "", apiHost, apiPort, otherUserId)))
 				.andExpect(method(HttpMethod.GET))
 				.andExpect(header("Authorization", "Basic " + encodedCredentials))
@@ -235,7 +230,7 @@ public class TestTixCondenser {
 	@DirtiesContext
 	public void testDisabledUser() throws JsonProcessingException, InterruptedException, UnknownHostException {
 		long otherUserId = userId + 1L;
-		TixDataPacket packet = TestTixReceiver.createNewPacket(message, otherUserId, installationId, installationKeyPair);
+		TixDataPacket packet = PackageGenerator.createNewPacket(otherUserId, installationId, installationKeyPair);
 		ObjectMapper mapper = new ObjectMapper();
 		mockServer.expect(requestTo(format("http%s://%s:%d/api/user/%d", useHttps? "s": "", apiHost, apiPort, otherUserId)))
 				.andExpect(method(HttpMethod.GET))
@@ -251,7 +246,7 @@ public class TestTixCondenser {
 	@DirtiesContext
 	public void testInvalidInstallation() throws InterruptedException, UnknownHostException, JsonProcessingException {
 		long otherInstallationId = installationId + 1L;
-		TixDataPacket packet = TestTixReceiver.createNewPacket(message, userId, otherInstallationId, installationKeyPair);
+		TixDataPacket packet = PackageGenerator.createNewPacket(userId, otherInstallationId, installationKeyPair);
 		ObjectMapper mapper = new ObjectMapper();
 		mockServer.expect(requestTo(format("http%s://%s:%d/api/user/%d", useHttps? "s": "", apiHost, apiPort, userId)))
 				.andExpect(method(HttpMethod.GET))
@@ -271,7 +266,7 @@ public class TestTixCondenser {
 	@DirtiesContext
 	public void testInstallationPublicKey() throws InterruptedException, UnknownHostException, JsonProcessingException {
 		KeyPair otherKeyPair = TixCoreUtils.NEW_KEY_PAIR.get();
-		TixDataPacket packet = TestTixReceiver.createNewPacket(message, userId, installationId, otherKeyPair);
+		TixDataPacket packet = PackageGenerator.createNewPacket(userId, installationId, otherKeyPair);
 		ObjectMapper mapper = new ObjectMapper();
 		mockServer.expect(requestTo(format("http%s://%s:%d/api/user/%d", useHttps? "s": "", apiHost, apiPort, userId)))
 				.andExpect(method(HttpMethod.GET))
