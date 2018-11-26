@@ -2,7 +2,6 @@ package com.github.tix_measurements.time.condenser.handlers;
 
 import com.github.tix_measurements.time.condenser.PackageGenerator;
 import com.github.tix_measurements.time.condenser.store.MeasurementStore;
-import com.github.tix_measurements.time.condenser.utils.jackson.TixPacketSerDe;
 import com.github.tix_measurements.time.core.data.TixDataPacket;
 import com.github.tix_measurements.time.core.util.TixCoreUtils;
 import org.junit.Before;
@@ -11,14 +10,12 @@ import org.junit.Test;
 import java.io.IOException;
 import java.security.KeyPair;
 
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.Mockito.*;
 
 public class TestTixReceiver {
 	private static final long USER_ID = 1L;
 	private static final long INSTALLATION_ID = 1L;
 	private static final KeyPair INSTALLATION_KEY_PAIR = TixCoreUtils.NEW_KEY_PAIR.get();
-	private static final TixPacketSerDe TIX_PACKET_SER_DE = new TixPacketSerDe();
 
 	private MeasurementStore measurementStore;
 	private TixPackageValidator packageValidator;
@@ -31,12 +28,14 @@ public class TestTixReceiver {
 		receiver = new TixReceiver(measurementStore, packageValidator);
 	}
 
-	@Test
-	public void testConstructor() {
-		assertThatExceptionOfType(IllegalArgumentException.class)
-				.isThrownBy(() -> new TixReceiver(null, packageValidator));
-		assertThatExceptionOfType(IllegalArgumentException.class)
-				.isThrownBy(() -> new TixReceiver(measurementStore, null));
+	@Test(expected = IllegalArgumentException.class)
+	public void testConstructorWithInvalidMeasurementStore() {
+		new TixReceiver(null, packageValidator);
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testConstructorWithInvalidPackageValidator() {
+		new TixReceiver(measurementStore, null);
 	}
 
 	@Test
