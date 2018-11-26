@@ -7,6 +7,7 @@ import com.github.tix_measurements.time.condenser.handlers.TixPackageValidator;
 import com.github.tix_measurements.time.condenser.handlers.TixReceiver;
 import com.github.tix_measurements.time.condenser.model.TixInstallation;
 import com.github.tix_measurements.time.condenser.model.TixUser;
+import com.github.tix_measurements.time.condenser.store.MeasurementStore;
 import com.github.tix_measurements.time.condenser.utils.jackson.TixPacketSerDe;
 import com.github.tix_measurements.time.core.data.TixDataPacket;
 import com.github.tix_measurements.time.core.util.TixCoreUtils;
@@ -31,10 +32,12 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyPair;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.stream.Stream;
 
@@ -91,6 +94,7 @@ public class TestTixCondenser {
 	private int actuatorPort;
 
 	private TixPacketSerDe serDe;
+	private MeasurementStore measurementStore;
 	private MockRestServiceServer mockServer;
 	private KeyPair installationKeyPair;
 	private Path reportsPath;
@@ -102,15 +106,24 @@ public class TestTixCondenser {
 	private long installationId;
 	private String encodedCredentials;
 
+	public static long getReportFirstUnixTimestamp(byte[] message) {
+		ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+		byte[] bytes = Arrays.copyOfRange(message, 0, Long.BYTES);
+		buffer.put(bytes);
+		buffer.flip();
+		return buffer.getLong();
+	}
+
 	@Before
 	public void setup() throws InterruptedException {
 		serDe = new TixPacketSerDe();
-		tixReceiver = new TixReceiver(reportsPathString, packageValidator);
+		measurementStore = new MeasurementStore(reportsPathString);
+		tixReceiver = new TixReceiver(measurementStore, packageValidator);
 		mockServer = MockRestServiceServer.createServer(packageValidator.getApiClient());
 		installationKeyPair = TixCoreUtils.NEW_KEY_PAIR.get();
 		reportsPath = Paths.get(reportsPathString);
 		message = TestTixReceiver.generateMessage();
-		reportFirstUnixTimestamp = TestTixReceiver.getReportFirstUnixTimestamp(message);
+		reportFirstUnixTimestamp = TestTixCondenser.getReportFirstUnixTimestamp(message);
 		username = "test-user";
 		userId = 1L;
 		installationName = "test-installation";
@@ -180,10 +193,10 @@ public class TestTixCondenser {
 						.exists()
 						.isRegularFile();
 				assertThat(file.getFileName().toString())
-						.startsWith(TixReceiver.REPORTS_FILE_SUFFIX)
-						.endsWith(TixReceiver.REPORTS_FILE_EXTENSION);
+						.startsWith(MeasurementStore.REPORTS_FILE_SUFFIX)
+						.endsWith(MeasurementStore.REPORTS_FILE_EXTENSION);
 				assertThat(file.getFileName().toString())
-						.isEqualTo(format(TixReceiver.REPORTS_FILE_NAME_TEMPLATE, reportFirstUnixTimestamp));
+						.isEqualTo(format(MeasurementStore.REPORTS_FILE_NAME_TEMPLATE, reportFirstUnixTimestamp));
 				try (BufferedReader reader = Files.newBufferedReader(file)) {
 					assertThat(reader.lines().count()).isEqualTo(1);
 					reader.lines().forEach(reportLine -> {
@@ -230,7 +243,7 @@ public class TestTixCondenser {
 				.andRespond(withSuccess(mapper.writeValueAsString(new TixUser(otherUserId, username, false)), MediaType.APPLICATION_JSON));
 		sendTixPacket(packet);
 		mockServer.verify();
-		Path expectedReportPath = TixReceiver.generateReportPath(reportsPath, packet);
+		Path expectedReportPath = MeasurementStore.generateReportPath(reportsPath, packet);
 		assertThat(expectedReportPath).doesNotExist();
 	}
 
@@ -250,7 +263,7 @@ public class TestTixCondenser {
 				.andRespond(withStatus(HttpStatus.NOT_FOUND));
 		sendTixPacket(packet);
 		mockServer.verify();
-		Path expectedReportPath = TixReceiver.generateReportPath(reportsPath, packet);
+		Path expectedReportPath = MeasurementStore.generateReportPath(reportsPath, packet);
 		assertThat(expectedReportPath).doesNotExist();
 	}
 
@@ -272,7 +285,7 @@ public class TestTixCondenser {
 						MediaType.APPLICATION_JSON));
 		sendTixPacket(packet);
 		mockServer.verify();
-		Path expectedReportPath = TixReceiver.generateReportPath(reportsPath, packet);
+		Path expectedReportPath = MeasurementStore.generateReportPath(reportsPath, packet);
 		assertThat(expectedReportPath).doesNotExist();
 	}
 }

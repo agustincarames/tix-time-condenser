@@ -26,7 +26,7 @@ public class TixPackageValidator {
 	public static final String USER_TEMPLATE = "%s/user/%d";
 	public static final String INSTALLATION_TEMPLATE = "%s/user/%d/installation/%d";
 
-	private final Logger logger = LoggerFactory.getLogger(TixReceiver.class);
+	private final Logger logger = LoggerFactory.getLogger(this.getClass());
 	private final HttpHeaders headers;
 	private final RestTemplate apiClient;
 	private final String apiPath;
