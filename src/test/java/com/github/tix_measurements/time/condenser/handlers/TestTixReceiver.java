@@ -44,7 +44,7 @@ public class TestTixReceiver {
 		TixDataPacket packet = PackageGenerator.createNewPacket(USER_ID, INSTALLATION_ID, INSTALLATION_KEY_PAIR);
 		when(packageValidator.validUserAndInstallation(packet)).thenReturn(true);
 		
-		receiver.receiveMessage(TIX_PACKET_SER_DE.serialize(packet));
+		receiver.receiveMessage(packet);
 		
 		verify(packageValidator, times(1)).validUserAndInstallation(packet);
 		verify(measurementStore, times(1)).storePacket(packet);
@@ -56,7 +56,7 @@ public class TestTixReceiver {
 		TixDataPacket packet = PackageGenerator.createNewPacket(otherUserId, INSTALLATION_ID, INSTALLATION_KEY_PAIR);
 		when(packageValidator.validUserAndInstallation(packet)).thenReturn(false);
 		
-		receiver.receiveMessage(TIX_PACKET_SER_DE.serialize(packet));
+		receiver.receiveMessage(packet);
 		
 		verify(packageValidator, times(1)).validUserAndInstallation(packet);
 		verify(measurementStore, never()).storePacket(packet);
