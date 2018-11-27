@@ -1,6 +1,6 @@
 package com.github.tix_measurements.time.condenser.store;
 
-import com.github.tix_measurements.time.condenser.PackageGenerator;
+import com.github.tix_measurements.time.condenser.PacketGenerator;
 import com.github.tix_measurements.time.condenser.utils.jackson.TixPacketSerDe;
 import com.github.tix_measurements.time.core.data.TixDataPacket;
 import com.github.tix_measurements.time.core.util.TixCoreUtils;
@@ -35,7 +35,7 @@ public class TestMeasurementStore {
 	@Before
 	public void setup() throws IOException, InterruptedException {
 		measurementStore = new MeasurementStore(REPORTS_PATH.toString());
-		packet = PackageGenerator.createNewPacket(USER_ID, INSTALLATION_ID, INSTALLATION_KEY_PAIR);
+		packet = PacketGenerator.createNewPacket(USER_ID, INSTALLATION_ID, INSTALLATION_KEY_PAIR);
 		serDe = new TixPacketSerDe();
 	}
 
@@ -80,7 +80,7 @@ public class TestMeasurementStore {
 						.startsWith(MeasurementStore.REPORTS_FILE_SUFFIX)
 						.endsWith(MeasurementStore.REPORTS_FILE_EXTENSION);
 				assertThat(file.getFileName().toString())
-						.isEqualTo(format(MeasurementStore.REPORTS_FILE_NAME_TEMPLATE, PackageGenerator.FIRST_UNIX_TIMESTAMP));
+						.isEqualTo(format(MeasurementStore.REPORTS_FILE_NAME_TEMPLATE, PacketGenerator.FIRST_UNIX_TIMESTAMP));
 				try (BufferedReader reader = Files.newBufferedReader(file)) {
 					assertThat(reader.lines().count()).isEqualTo(1);
 					reader.lines().forEach(reportLine -> {

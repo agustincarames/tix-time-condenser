@@ -1,6 +1,6 @@
 package com.github.tix_measurements.time.condenser.handlers;
 
-import com.github.tix_measurements.time.condenser.PackageGenerator;
+import com.github.tix_measurements.time.condenser.PacketGenerator;
 import com.github.tix_measurements.time.condenser.handlers.TixReceiver;
 import com.github.tix_measurements.time.condenser.utils.jackson.TixPacketSerDe;
 import com.github.tix_measurements.time.core.data.TixDataPacket;
@@ -61,8 +61,8 @@ public class TestRabbitReceiver {
 
 	@Test
 	@DirtiesContext
-	public void testRabbitSendsPackage() throws Exception {
-		TixDataPacket packet = PackageGenerator.createNewPacket(USER_ID, INSTALLATION_ID, INSTALLATION_KEY_PAIR);
+	public void testRabbitSendsPacket() throws Exception {
+		TixDataPacket packet = PacketGenerator.createNewPacket(USER_ID, INSTALLATION_ID, INSTALLATION_KEY_PAIR);
 		
 		rabbitTemplate.convertAndSend(receivingQueueName, serDe.serialize(packet));
 		Thread.sleep(500L);

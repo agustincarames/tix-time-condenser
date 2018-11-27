@@ -17,19 +17,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TixReceiver {
 	private final Logger logger = LoggerFactory.getLogger(this.getClass());
 	private final MeasurementStore measurementStore;
-	private final TixPackageValidator packageValidator;
+	private final TixPacketValidator packetValidator;
 
 	public TixReceiver(MeasurementStore measurementStore,
-		               TixPackageValidator packageValidator) {
+		               TixPacketValidator packetValidator) {
 		logger.info("Creating TixReceiver");
 		try {
 			assertThat(measurementStore).isNotNull();
-			assertThat(packageValidator).isNotNull();
+			assertThat(packetValidator).isNotNull();
 		} catch (AssertionError ae) {
 			throw new IllegalArgumentException(ae);
 		}
 		this.measurementStore = measurementStore;
-		this.packageValidator = packageValidator;
+		this.packetValidator = packetValidator;
 	}
 
 	@RabbitListener(queues = "${tix-condenser.queues.receiving.name}")
@@ -40,7 +40,7 @@ public class TixReceiver {
 			return;
 		}
 
-		if (!packageValidator.validUserAndInstallation(packet)) {
+		if (!packetValidator.validUserAndInstallation(packet)) {
 			logger.warn("Invalid user or installation");
 			logger.debug("packet={}", packet);
 			return;

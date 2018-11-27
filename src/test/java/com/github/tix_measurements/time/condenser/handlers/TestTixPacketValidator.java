@@ -2,7 +2,7 @@ package com.github.tix_measurements.time.condenser.handlers;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.tix_measurements.time.condenser.PackageGenerator;
+import com.github.tix_measurements.time.condenser.PacketGenerator;
 import com.github.tix_measurements.time.condenser.model.TixInstallation;
 import com.github.tix_measurements.time.condenser.model.TixUser;
 import com.github.tix_measurements.time.core.data.TixDataPacket;
@@ -28,7 +28,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-public class TestTixPackageValidator {
+public class TestTixPacketValidator {
 	private static final boolean USE_HTTPS = false;
 	private static final String API_HOST = "localhost";
 	private static final int API_PORT = 80;
@@ -39,29 +39,29 @@ public class TestTixPackageValidator {
 	private static final KeyPair INSTALLATION_KEY_PAIR = TixCoreUtils.NEW_KEY_PAIR.get();
 
 	private MockRestServiceServer server;
-	private TixPackageValidator packageValidator;
+	private TixPacketValidator packageValidator;
 	
 	@Before
 	public void setup() throws InterruptedException {
-		packageValidator = new TixPackageValidator(USE_HTTPS, API_HOST, API_PORT);
+		packageValidator = new TixPacketValidator(USE_HTTPS, API_HOST, API_PORT);
 		server = MockRestServiceServer.createServer(packageValidator.getApiClient());
 	}
 
 	@Test
 	public void testConstructor() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
-				.isThrownBy(() -> new TixPackageValidator(true, null, API_PORT));
+				.isThrownBy(() -> new TixPacketValidator(true, null, API_PORT));
 		assertThatExceptionOfType(IllegalArgumentException.class)
-				.isThrownBy(() -> new TixPackageValidator(true, Strings.EMPTY, API_PORT));
+				.isThrownBy(() -> new TixPacketValidator(true, Strings.EMPTY, API_PORT));
 		assertThatExceptionOfType(IllegalArgumentException.class)
-				.isThrownBy(() -> new TixPackageValidator(true, API_HOST, 0));
+				.isThrownBy(() -> new TixPacketValidator(true, API_HOST, 0));
 		assertThatExceptionOfType(IllegalArgumentException.class)
-				.isThrownBy(() -> new TixPackageValidator(true, API_HOST, -1));
+				.isThrownBy(() -> new TixPacketValidator(true, API_HOST, -1));
 	}
 
 	@Test
 	public void testValidPacket() throws IOException, InterruptedException {
-		TixDataPacket packet = PackageGenerator.createNewPacket(USER_ID, INSTALLATION_ID, INSTALLATION_KEY_PAIR);
+		TixDataPacket packet = PacketGenerator.createNewPacket(USER_ID, INSTALLATION_ID, INSTALLATION_KEY_PAIR);
 		ObjectMapper mapper = new ObjectMapper();
 		server.expect(requestTo(format("http://%s:%d/api/user/%d", API_HOST, API_PORT, USER_ID)))
 				.andExpect(method(HttpMethod.GET))
@@ -79,7 +79,7 @@ public class TestTixPackageValidator {
 	@Test
 	public void testInvalidUser() throws InterruptedException, UnknownHostException, JsonProcessingException {
 		long otherUserId = USER_ID + 1L;
-		TixDataPacket packet = PackageGenerator.createNewPacket(otherUserId, INSTALLATION_ID, INSTALLATION_KEY_PAIR);
+		TixDataPacket packet = PacketGenerator.createNewPacket(otherUserId, INSTALLATION_ID, INSTALLATION_KEY_PAIR);
 		server.expect(requestTo(format("http://%s:%d/api/user/%d", API_HOST, API_PORT, otherUserId)))
 				.andExpect(method(HttpMethod.GET))
 				.andRespond(withStatus(HttpStatus.NOT_FOUND));
@@ -91,7 +91,7 @@ public class TestTixPackageValidator {
 	@Test
 	public void testDisabledUser() throws InterruptedException, UnknownHostException, JsonProcessingException {
 		long otherUserId = USER_ID + 1L;
-		TixDataPacket packet = PackageGenerator.createNewPacket(otherUserId, INSTALLATION_ID, INSTALLATION_KEY_PAIR);
+		TixDataPacket packet = PacketGenerator.createNewPacket(otherUserId, INSTALLATION_ID, INSTALLATION_KEY_PAIR);
 		ObjectMapper mapper = new ObjectMapper();
 		server.expect(requestTo(format("http://%s:%d/api/user/%d", API_HOST, API_PORT, otherUserId)))
 				.andExpect(method(HttpMethod.GET))
@@ -104,7 +104,7 @@ public class TestTixPackageValidator {
 	@Test
 	public void testInvalidInstallation() throws InterruptedException, UnknownHostException, JsonProcessingException {
 		long otherInstallationId = INSTALLATION_ID + 1L;
-		TixDataPacket packet = PackageGenerator.createNewPacket(USER_ID, otherInstallationId, INSTALLATION_KEY_PAIR);
+		TixDataPacket packet = PacketGenerator.createNewPacket(USER_ID, otherInstallationId, INSTALLATION_KEY_PAIR);
 		ObjectMapper mapper = new ObjectMapper();
 		server.expect(requestTo(format("http://%s:%d/api/user/%d", API_HOST, API_PORT, USER_ID)))
 				.andExpect(method(HttpMethod.GET))
@@ -120,7 +120,7 @@ public class TestTixPackageValidator {
 	@Test
 	public void testInstallationPublicKey() throws InterruptedException, UnknownHostException, JsonProcessingException {
 		KeyPair otherKeyPair = TixCoreUtils.NEW_KEY_PAIR.get();
-		TixDataPacket packet = PackageGenerator.createNewPacket(USER_ID, INSTALLATION_ID, otherKeyPair);
+		TixDataPacket packet = PacketGenerator.createNewPacket(USER_ID, INSTALLATION_ID, otherKeyPair);
 		ObjectMapper mapper = new ObjectMapper();
 		server.expect(requestTo(format("http://%s:%d/api/user/%d", API_HOST, API_PORT, USER_ID)))
 				.andExpect(method(HttpMethod.GET))

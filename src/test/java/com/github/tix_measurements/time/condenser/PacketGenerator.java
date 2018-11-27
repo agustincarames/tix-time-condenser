@@ -12,7 +12,7 @@ import com.github.tix_measurements.time.core.data.TixDataPacket;
 import com.github.tix_measurements.time.core.data.TixPacketType;
 import com.github.tix_measurements.time.core.util.TixCoreUtils;
 
-public class PackageGenerator {
+public class PacketGenerator {
 	public static final long FIRST_UNIX_TIMESTAMP = 1530000000L;
 	
 	private static final long SECOND_TO_NANO = 1000 * 1000 * 1000;

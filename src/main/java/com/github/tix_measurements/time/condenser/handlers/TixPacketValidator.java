@@ -22,7 +22,7 @@ import com.github.tix_measurements.time.core.util.TixCoreUtils;
 import com.google.common.base.Strings;
 
 @Component
-public class TixPackageValidator {
+public class TixPacketValidator {
 	public static final String USER_TEMPLATE = "%s/user/%d";
 	public static final String INSTALLATION_TEMPLATE = "%s/user/%d/installation/%d";
 
@@ -31,10 +31,10 @@ public class TixPackageValidator {
 	private final RestTemplate apiClient;
 	private final String apiPath;
 
-	public TixPackageValidator(@Value("${tix-condenser.tix-api.https}") boolean useHttps,
+	public TixPacketValidator(@Value("${tix-condenser.tix-api.https}") boolean useHttps,
 	                           @Value("${tix-condenser.tix-api.host}") String apiHost,
 	                           @Value("${tix-condenser.tix-api.port}") int apiPort) {
-		logger.info("Creating TixPackageValidator");
+		logger.info("Creating TixPacketValidator");
 		logger.trace("useHttps={} apiHost={} apiPort={}", useHttps, apiHost, apiPort);
 		try {
 			assertThat(apiHost).isNotEmpty().isNotEmpty();
