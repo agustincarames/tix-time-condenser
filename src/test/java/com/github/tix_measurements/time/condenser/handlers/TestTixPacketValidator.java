@@ -60,7 +60,7 @@ public class TestTixPacketValidator {
 	}
 
 	@Test
-	public void testValidPacket() throws IOException, InterruptedException {
+	public void testValidPacket() throws IOException {
 		TixDataPacket packet = PacketGenerator.createNewPacket(USER_ID, INSTALLATION_ID);
 		ObjectMapper mapper = new ObjectMapper();
 		server.expect(requestTo(format("http://%s:%d/api/user/%d", API_HOST, API_PORT, USER_ID)))
@@ -77,7 +77,7 @@ public class TestTixPacketValidator {
 	}
 
 	@Test
-	public void testInvalidUser() throws InterruptedException, UnknownHostException, JsonProcessingException {
+	public void testInvalidUser() throws JsonProcessingException {
 		long otherUserId = USER_ID + 1L;
 		TixDataPacket packet = PacketGenerator.createNewPacket(otherUserId, INSTALLATION_ID);
 		server.expect(requestTo(format("http://%s:%d/api/user/%d", API_HOST, API_PORT, otherUserId)))

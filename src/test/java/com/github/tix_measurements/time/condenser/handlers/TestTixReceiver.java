@@ -1,12 +1,14 @@
 package com.github.tix_measurements.time.condenser.handlers;
 
 import com.github.tix_measurements.time.condenser.PacketGenerator;
+import com.github.tix_measurements.time.condenser.sender.RabbitSubmitter;
 import com.github.tix_measurements.time.condenser.store.MeasurementStore;
 import com.github.tix_measurements.time.core.data.TixDataPacket;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import static org.mockito.Mockito.*;
 
@@ -16,29 +18,37 @@ public class TestTixReceiver {
 
 	private MeasurementStore measurementStore;
 	private TixPacketValidator packetValidator;
+	private RabbitSubmitter submitter;
 	private TixReceiver receiver;
 	
 	@Before
 	public void setup() throws InterruptedException {
 		packetValidator = mock(TixPacketValidator.class);
 		measurementStore = mock(MeasurementStore.class);
-		receiver = new TixReceiver(measurementStore, packetValidator);
+		submitter = mock(RabbitSubmitter.class);
+		receiver = new TixReceiver(measurementStore, packetValidator, submitter);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
-	public void testConstructorWithInvalidMeasurementStore() {
-		new TixReceiver(null, packetValidator);
+	public void testConstructorWithOnlyValidSubmitter() {
+		new TixReceiver(null, null, submitter);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
-	public void testConstructorWithInvalidPacketValidator() {
-		new TixReceiver(measurementStore, null);
+	public void testConstructorWithOnlyValidPacketValidator() {
+		new TixReceiver(null, packetValidator, null);
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testConstructorWithOnlyValidMeasurementStore() {
+		new TixReceiver(measurementStore, null, null);
 	}
 
 	@Test
-	public void testValidPacket() throws IOException, InterruptedException {
+	public void testValidPacket() throws IOException {
 		TixDataPacket packet = PacketGenerator.createNewPacket(USER_ID, INSTALLATION_ID);
 		when(packetValidator.validUserAndInstallation(packet)).thenReturn(true);
+		when(measurementStore.storePacket(packet)).thenReturn(Optional.empty());
 		
 		receiver.receiveMessage(packet);
 		
