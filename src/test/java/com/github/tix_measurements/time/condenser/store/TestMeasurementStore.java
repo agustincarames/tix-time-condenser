@@ -3,7 +3,6 @@ package com.github.tix_measurements.time.condenser.store;
 import com.github.tix_measurements.time.condenser.PacketGenerator;
 import com.github.tix_measurements.time.condenser.utils.jackson.TixPacketSerDe;
 import com.github.tix_measurements.time.core.data.TixDataPacket;
-import com.github.tix_measurements.time.core.util.TixCoreUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -14,7 +13,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.KeyPair;
 import java.util.Comparator;
 import java.util.stream.Stream;
 
@@ -26,7 +24,6 @@ public class TestMeasurementStore {
 	private static final Path REPORTS_PATH = Paths.get(System.getProperty("java.io.tmpdir"));
 	private static final long USER_ID = 1L;
 	private static final long INSTALLATION_ID = 1L;
-	private static final KeyPair INSTALLATION_KEY_PAIR = TixCoreUtils.NEW_KEY_PAIR.get();
 
 	private MeasurementStore measurementStore;
 	private TixDataPacket packet;
@@ -35,7 +32,7 @@ public class TestMeasurementStore {
 	@Before
 	public void setup() throws IOException, InterruptedException {
 		measurementStore = new MeasurementStore(REPORTS_PATH.toString());
-		packet = PacketGenerator.createNewPacket(USER_ID, INSTALLATION_ID, INSTALLATION_KEY_PAIR);
+		packet = PacketGenerator.createNewPacket(USER_ID, INSTALLATION_ID);
 		serDe = new TixPacketSerDe();
 	}
 
@@ -80,7 +77,7 @@ public class TestMeasurementStore {
 						.startsWith(MeasurementStore.REPORTS_FILE_SUFFIX)
 						.endsWith(MeasurementStore.REPORTS_FILE_EXTENSION);
 				assertThat(file.getFileName().toString())
-						.isEqualTo(format(MeasurementStore.REPORTS_FILE_NAME_TEMPLATE, PacketGenerator.FIRST_UNIX_TIMESTAMP));
+						.isEqualTo(format(MeasurementStore.REPORTS_FILE_NAME_TEMPLATE, PacketGenerator.DEFAULT_FIRST_UNIX_TIMESTAMP));
 				try (BufferedReader reader = Files.newBufferedReader(file)) {
 					assertThat(reader.lines().count()).isEqualTo(1);
 					reader.lines().forEach(reportLine -> {

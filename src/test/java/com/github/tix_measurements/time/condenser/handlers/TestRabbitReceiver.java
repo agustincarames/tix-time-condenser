@@ -4,7 +4,6 @@ import com.github.tix_measurements.time.condenser.PacketGenerator;
 import com.github.tix_measurements.time.condenser.handlers.TixReceiver;
 import com.github.tix_measurements.time.condenser.utils.jackson.TixPacketSerDe;
 import com.github.tix_measurements.time.core.data.TixDataPacket;
-import com.github.tix_measurements.time.core.util.TixCoreUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -19,7 +18,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.io.IOException;
-import java.security.KeyPair;
 
 import static org.mockito.Mockito.*;
 
@@ -29,7 +27,6 @@ import static org.mockito.Mockito.*;
 public class TestRabbitReceiver {
 	private static final long USER_ID = 1L;
 	private static final long INSTALLATION_ID = 1L;
-	private static final KeyPair INSTALLATION_KEY_PAIR = TixCoreUtils.NEW_KEY_PAIR.get();
 
 	@Autowired
 	private RabbitAdmin rabbitAdmin;
@@ -62,7 +59,7 @@ public class TestRabbitReceiver {
 	@Test
 	@DirtiesContext
 	public void testRabbitSendsPacket() throws Exception {
-		TixDataPacket packet = PacketGenerator.createNewPacket(USER_ID, INSTALLATION_ID, INSTALLATION_KEY_PAIR);
+		TixDataPacket packet = PacketGenerator.createNewPacket(USER_ID, INSTALLATION_ID);
 		
 		rabbitTemplate.convertAndSend(receivingQueueName, serDe.serialize(packet));
 		Thread.sleep(500L);

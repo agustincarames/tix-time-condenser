@@ -3,19 +3,16 @@ package com.github.tix_measurements.time.condenser.handlers;
 import com.github.tix_measurements.time.condenser.PacketGenerator;
 import com.github.tix_measurements.time.condenser.store.MeasurementStore;
 import com.github.tix_measurements.time.core.data.TixDataPacket;
-import com.github.tix_measurements.time.core.util.TixCoreUtils;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.security.KeyPair;
 
 import static org.mockito.Mockito.*;
 
 public class TestTixReceiver {
 	private static final long USER_ID = 1L;
 	private static final long INSTALLATION_ID = 1L;
-	private static final KeyPair INSTALLATION_KEY_PAIR = TixCoreUtils.NEW_KEY_PAIR.get();
 
 	private MeasurementStore measurementStore;
 	private TixPacketValidator packetValidator;
@@ -40,7 +37,7 @@ public class TestTixReceiver {
 
 	@Test
 	public void testValidPacket() throws IOException, InterruptedException {
-		TixDataPacket packet = PacketGenerator.createNewPacket(USER_ID, INSTALLATION_ID, INSTALLATION_KEY_PAIR);
+		TixDataPacket packet = PacketGenerator.createNewPacket(USER_ID, INSTALLATION_ID);
 		when(packetValidator.validUserAndInstallation(packet)).thenReturn(true);
 		
 		receiver.receiveMessage(packet);
@@ -52,7 +49,7 @@ public class TestTixReceiver {
 	@Test
 	public void testInvalidPacket() throws Exception {
 		long otherUserId = USER_ID + 1L;
-		TixDataPacket packet = PacketGenerator.createNewPacket(otherUserId, INSTALLATION_ID, INSTALLATION_KEY_PAIR);
+		TixDataPacket packet = PacketGenerator.createNewPacket(otherUserId, INSTALLATION_ID);
 		when(packetValidator.validUserAndInstallation(packet)).thenReturn(false);
 		
 		receiver.receiveMessage(packet);
