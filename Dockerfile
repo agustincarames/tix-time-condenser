@@ -1,4 +1,4 @@
-FROM gradle:jdk8-alpine
+FROM gradle:4.10-jdk8-alpine
 
 # Install app dependencies
 WORKDIR /home/gradle

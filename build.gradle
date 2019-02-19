@@ -65,15 +65,6 @@ dependencies {
     testCompile group: 'org.mockito', name: 'mockito-all', version: "${mockitoVersion}"
 }
 
-jacocoTestReport {
-    reports {
-        xml.enabled true
-        xml.destination "${buildDir}/test-results/coverage.xml"
-        csv.enabled false
-        html.destination "${buildDir}/reports/coverage"
-    }
-}
-
 task getDeps(type: Exec) {
     configurations.testRuntime.files
     commandLine 'echo', 'Downloaded all dependencies'
